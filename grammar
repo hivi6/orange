@@ -1,0 +1,116 @@
+========================================
+GRAMMAR
+========================================
+
+<prog>     := <decl>*
+
+<decl>           := <var-decl> | <fn-decl> | <struct-decl>
+<var-decl>       := VAR_KEYWORD IDENTIFIER (COLON <type-specifier>)? (EQUAL <expr>)? SEMICOLON
+<fn-decl>        := FN_KEYWORD IDENTIFIER LPAREN <fn-params>? RPAREN <type-specifier>? LBRACE <stmt>* RBRACE
+<struct-decl>    := STRUCT_KEYWORD LBRACE <struct-fields>? RBRACE
+<type-specifier> := STAR* IDENTIFIER (LBRACKET INT_LITERAL RBRACKET)*
+<fn-params>      := IDENTIFIER COLON <type-specifier> (COMMA IDENTIFIER COLON <type-specifier>)*
+<struct-fields>  := (IDENTIFIER COLON <type-specifier> SEMICOLON)+
+
+<stmt>          := <block-stmt> | <var-stmt> | <if-stmt> | <while-stmt> | <defer-stmt>
+                 | <break-stmt> | <continue-stmt> | <return-stmt> | <expr-stmt>
+<block-stmt>    := LBRACE <stmt>* RBRACE
+<var-stmt>      := <var-decl>
+<if-stmt>       := IF_KEYWORD LPAREN <expr> RPAREN <stmt> (ELSE_KEYWORD <stmt>)?
+<while-stmt>    := WHILE_KEYWORD <stmt>
+<defer-stmt>    := DEFER_KEYWORD <expr>
+<break-stmt>    := BREAK_KEYWORD SEMICOLON
+<continue-stmt> := CONTINUE_KEYWORD SEMICOLON
+<return-stmt>   := RETURN_KEYWORD <expr>? SEMICOLON
+<expr-stmt>     := <expr> SEMICOLON
+
+<expr>          := <assign-expr>
+<assign-expr>   := <ternary-expr> (EQUAL <assign-expr>)?
+<ternary-expr>  := <lor-expr> (QUESTION <ternary-expr> COLON <ternary-expr>)?
+<lor-expr>      := <land-expr> (PIPE_PIPE <land-expr>)*
+<land-expr>     := <bor-expr> (AMPERSAND_AMPERSAND <bor-expr>)*
+<bor-expr>      := <bxor-expr> (PIPE <bxor-expr>)*
+<bxor-expr>     := <band-expr> (CARET <band-expr>)*
+<band-expr>     := <equality-expr> (AMPERSAND <equality-expr>)*
+<equality-expr> := <relation-expr> ((EQUAL_EQUAL | BANG_EQUAL) <relation-expr>)*
+<relation-expr> := <shift-expr> ((LCHEVRON | LCHEVRON_EQUAL | RCHEVRON | RCHEVRON_EQUAL) <shift-expr>)*
+<shift-expr>    := <add-expr> ((LCHEVRON_LCHEVRON | RCHEVRON_RCHEVRON) <add-expr>)*
+<add-expr>      := <mul-expr> ((PLUS | DASH) <mul-expr>)*
+<mul-expr>      := <prefix-expr> ((STAR | FSLASH | MOD) <prefix-expr>)*
+<prefix-expr>   := (PLUS | DASH) <prefix-expr>
+                 | (PLUS_PLUS | DASH_DASH) <prefix-expr>
+                 | (BANG | TILDE) <prefix-expr>
+                 | (STAR | AMPERSAND) <prefix-expr>
+                 | SIZEOF_KEYWORD <prefix-expr>
+		 | LPAREN <expr> RPAREN
+                 | <postfix-expr>
+<postfix-expr>  := <primary-expr> (PLUS_PLUS | DASH_DASH | <fn-call> | <arr-access> | <member-access>)*
+<primary-expr>  := INT_LITERAL | CHAR_LITERAL | STR_LITERAL | IDENTIFIER
+<fn-call>       := LPAREN <fn-args>? RPAREN
+<arr-access>    := LBRACKET <expr> RBRACKET
+<member-access> := (DOT | DASH_RCHEVRON) IDENTIFIER
+
+========================================
+TOKENS
+========================================
+
+AMPERSAND           := "&"
+AMPERSAND_AMPERSAND := "&&"
+BANG                := "!"
+BANG_EQUAL          := "!="
+CARET               := "^"
+COLON               := ":"
+COMMA               := ","
+DASH_RCHEVRON       := "->"
+DOT                 := "."
+EQUAL               := "="
+EQUAL_EQUAL         := "=="
+FSLASH              := "/"
+LBRACE              := "{"
+LBRACKET            := "["
+LCHEVRON            := "<"
+LCHEVRON_EQUAL      := "<="
+LCHEVRON_LCHEVRON   := "<<"
+LPAREN              := "("
+DASH                := "-"
+DASH_DASH           := "--"
+MOD                 := "%"
+PIPE                := "|"
+PIPE_PIPE           := "||"
+PLUS                := "+"
+PLUS_PLUS           := "++"
+QUESTION            := "?"
+RBRACE              := "}"
+RBRACKET            := "]"
+RCHEVRON            := ">"
+RCHEVRON_EQUAL      := ">="
+RCHEVRON_RCHEVRON   := ">>"
+RPAREN              := ")"
+SEMICOLON           := ";"
+STAR                := "*"
+TILDE               := "~"
+
+BREAK_KEYWORD    := "break"
+CONTINUE_KEYWORD := "continue"
+DEFER_KEYWORD    := "defer"
+ELSE_KEYWORD     := "else"
+FN_KEYWORD       := "fn"
+IF_KEYWORD       := "if"
+RETURN_KEYWORD   := "return"
+SIZEOF_KEYWORD   := "sizeof"
+STRUCT_KEYWORD   := "struct"
+VAR_KEYWORD      := "var"
+WHILE_KEYWORD    := "while"
+
+IDENTIFIER := [a-zA-Z_][a-zA-Z0-9_]*
+
+INT_LITERAL                      := "0" | [1-9][0-9]*
+CHAR_LITERAL                     := "'" (<printable-chars-without-squote> | <escape-chars>) "'"
+STR_LITERAL                      := "\"" (<printable-chars-without-dquote> | <escape-chars>) "\""
+<printable-chars>                := [32, 127)
+<printable-chars-without-squote> := <printable-chars> - "'"
+<printable-chars-without-dquote> := <printable-chars> - "\""
+<escape-chars>                   := "\" ("n" | "t" | "b" | "r" | "a" | "'" | "\"" | "?" | "\\" | "f" | "v" | "0")
+                                  | "\" [0-7]{1,3}
+                                  | "\" "x" [0-9a-fA-F]{1,2}
+
