@@ -1,5 +1,26 @@
 #include "token.h"
+#include "error.h"
 #include "common.h"
+
+// ========================================
+// helper declaration
+// ========================================
+
+static const char *g_filepath;
+static const char *g_source;
+static int g_source_length;
+static token_t *g_head;
+static token_t *g_tail;
+static pos_t g_prev_pos;
+static pos_t g_cur_pos;
+
+static void init(const char *filepath);
+static char is_eof();
+static void generate_token();
+static char *read_file(const char *filepath);
+static char is_whitespace(char ch);
+static char char_at(int offset);
+static void char_skip(int inc);
 
 // ========================================
 // token.h - definition
@@ -60,6 +81,93 @@ const char *token_kind_str(int kind) {
 }
 
 token_t *generate_tokens(const char *filepath) {
-	return NULL;
+	init(filepath);
+
+	while (!is_eof()) {
+		generate_token();
+	}
+
+	return g_head;
+}
+
+static void init(const char *filepath) {
+	g_filepath = filepath;
+	g_source = read_file(filepath);
+	g_source_length = strlen(g_source);
+	g_head = NULL;
+	g_tail = NULL;
+	g_prev_pos = POS_INIT;
+	g_cur_pos = POS_INIT;
+}
+
+static char is_eof() {
+	return g_cur_pos.index >= g_source_length;
+}
+
+static void generate_token() {
+	g_prev_pos = g_cur_pos;
+
+	if (is_whitespace(char_at(0))) {
+		char_skip(1);
+		return;
+	}
+
+	char_skip(1);
+	eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos, "Unknown character");
+}
+
+static char *read_file(const char *filepath) {
+	char is_stdin = (strcmp(filepath, "-") == 0);
+	FILE *fptr = stdin;
+
+	if (!is_stdin) fptr = fopen(filepath, "r");
+	if (fptr == NULL) {
+		char buffer[1024];
+		snprintf(buffer, sizeof(buffer), "ERROR: read_file(\"%s\")", filepath);
+		perror(buffer);
+		exit(1);
+	}
+
+	fseek(fptr, 0, SEEK_END);
+	int len = ftell(fptr);
+	fseek(fptr, 0, SEEK_SET);
+
+	char *buffer = (char *) malloc((len+1) * sizeof(char));
+	if (buffer == NULL) {
+		perror("Error in read_file while malloc");
+		exit(1);
+	}
+	fread(buffer, 1, len, fptr);
+	buffer[len] = 0;
+
+	if (!is_stdin) fclose(fptr);
+
+	return buffer;
+}
+
+char is_whitespace(char ch) {
+	return (ch == 0 || ch == '\n' || ch == ' ' || ch == '\t');
+}
+
+static char char_at(int offset) {
+	int index = g_cur_pos.index + offset;
+	if (index >= g_source_length) {
+		return 0;
+	}
+
+	return g_source[index];
+}
+
+static void char_skip(int inc) {
+	for (int i = 0; i < inc; i++) {
+		if (is_eof()) break;
+
+		if (char_at(0) == '\n') {
+			g_cur_pos.line++;
+			g_cur_pos.column = 0;
+		}
+		g_cur_pos.index++;
+		g_cur_pos.column++;
+	}
 }
 

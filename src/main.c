@@ -14,7 +14,11 @@ void usage(FILE *fptr) {
 		"    programming language for citrus VM\n"
 		"\n"
 		"OPTION:\n"
-		"    -h, --help  This screen\n");
+		"    -h, --help  This screen\n"
+		"\n"
+		"HINTS:\n"
+		"    1. If you want to read from stdin, then make filepath == '-'\n"
+		"       echo hello | orange -; this should read hello from the stdin\n");
 }
 
 // ========================================
@@ -47,7 +51,7 @@ int main(int argc, const char **argv) {
 		exit(1);
 	}
 
-	printf("Token kind: %s\n", token_kind_str(TK_AMPERSAND_AMPERSAND));
+	token_t *tokens = generate_tokens(argv[argi]);
 
 	return 0;
 }
