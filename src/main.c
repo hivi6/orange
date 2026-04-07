@@ -47,7 +47,7 @@ int main(int argc, const char **argv) {
 		exit(1);
 	}
 
-	printf("Filepath: %s\n", argv[argi]);
+	printf("Token kind: %s\n", token_kind_str(TK_AMPERSAND_AMPERSAND));
 
 	return 0;
 }

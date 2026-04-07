@@ -4,9 +4,7 @@
 #include "pos.h"
 
 enum {
-	TK_EOF = 0,
-
-	TK_AMPERSAND,
+	TK_AMPERSAND = 0,
 	TK_AMPERSAND_AMPERSAND,
 	TK_BANG,
 	TK_BANG_EQUAL,
@@ -67,9 +65,33 @@ struct token_t {
 	const char *source;
 	pos_t start;
 	pos_t end;
+
+	struct token_t *next;
 };
 
 typedef struct token_t token_t;
+
+/**
+ * Get the string alternative to the token kind number
+ *
+ * params:
+ *     kind  enum token kind
+ *
+ * returns:
+ *     character string alternative to the enum
+ */
+const char *token_kind_str(int kind);
+
+/**
+ * Generate tokens from the given filepath
+ *
+ * params:
+ *     filepath  filepath to the source text whose tokens are generated
+ *
+ * returns:
+ *     head to the token list
+ */
+token_t *generate_tokens(const char *filepath);
 
 #endif // TOKEN_H
 
