@@ -27,8 +27,6 @@ void usage(FILE *fptr) {
 
 int main(int argc, const char **argv) {
 	int usage_flag = 0;
-
-	// read all the flags
 	int argi = 1;
 	for (; argi < argc; argi++) {
 		if (strcmp(argv[argi], "-h") == 0 || 
@@ -52,6 +50,14 @@ int main(int argc, const char **argv) {
 	}
 
 	token_t *tokens = generate_tokens(argv[argi]);
+	for (token_t *head = tokens; head; head = head->next) {
+		printf("TOKEN_KIND: %s\n", token_kind_str(head->kind));
+		printf("TOKEN_LEXICAL: ");
+		for (int i = head->start.index; i < head->end.index; i++) {
+			printf("%c", head->source[i]);
+		}
+		printf("\n\n");
+	}
 
 	return 0;
 }

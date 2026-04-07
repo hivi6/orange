@@ -21,6 +21,7 @@ static char *read_file(const char *filepath);
 static char is_whitespace(char ch);
 static char char_at(int offset);
 static void char_skip(int inc);
+static void token_append(int kind);
 
 // ========================================
 // token.h - definition
@@ -112,8 +113,22 @@ static void generate_token() {
 		return;
 	}
 
+	int skip = 1;
+	int kind = -1;
+	if (char_at(0) == '&' && char_at(1) == '&') skip = 2, kind = TK_AMPERSAND_AMPERSAND;
+	else if (char_at(0) == '&') skip = 1, kind = TK_AMPERSAND;
+	else if (char_at(0) == '!' && char_at(1) == '=') skip = 2, kind = TK_BANG_EQUAL;
+	else if (char_at(0) == '!') skip = 1, kind = TK_BANG;
+
+	if (kind != -1) {
+		char_skip(skip);
+		token_append(kind);
+		return;
+	}
+
 	char_skip(1);
 	eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos, "Unknown character");
+	exit(1);
 }
 
 static char *read_file(const char *filepath) {
@@ -128,17 +143,20 @@ static char *read_file(const char *filepath) {
 		exit(1);
 	}
 
-	fseek(fptr, 0, SEEK_END);
-	int len = ftell(fptr);
-	fseek(fptr, 0, SEEK_SET);
+	int len = 1024 * 1024; // For stdin
+	if (!is_stdin) {
+		fseek(fptr, 0, SEEK_END);
+		len = ftell(fptr);
+		fseek(fptr, 0, SEEK_SET);
+	}
 
-	char *buffer = (char *) malloc((len+1) * sizeof(char));
+	char *buffer = (char *) calloc(len+1, sizeof(char));
 	if (buffer == NULL) {
 		perror("Error in read_file while malloc");
 		exit(1);
 	}
-	fread(buffer, 1, len, fptr);
-	buffer[len] = 0;
+	int size = fread(buffer, 1, len, fptr);
+	buffer[size] = 0;
 
 	if (!is_stdin) fclose(fptr);
 
@@ -169,5 +187,19 @@ static void char_skip(int inc) {
 		g_cur_pos.index++;
 		g_cur_pos.column++;
 	}
+}
+
+static void token_append(int kind) {
+	token_t *res = malloc(sizeof(token_t));
+	res->kind = kind;
+	res->filepath = g_filepath;
+	res->source = g_source;
+	res->start = g_prev_pos;
+	res->end = g_cur_pos;
+	res->next = NULL;
+
+	if (g_head == NULL) g_head = res;
+	else g_tail->next = res;
+	g_tail = res;
 }
 
