@@ -156,6 +156,14 @@ static void generate_token() {
 		while (isalnum(char_at(0)) || char_at(0) == '_') char_skip(1);
 		kind = keyword_kind();
 	}
+	else if (isdigit(char_at(0))) {
+		skip = 0;
+
+		if (char_at(0) == '0') char_skip(1);
+		else while (isdigit(char_at(0))) char_skip(1);
+		
+		kind = TK_INT_LITERAL;
+	}
 
 	if (kind != -1) {
 		char_skip(skip);
