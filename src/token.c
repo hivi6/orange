@@ -119,6 +119,37 @@ static void generate_token() {
 	else if (char_at(0) == '&') skip = 1, kind = TK_AMPERSAND;
 	else if (char_at(0) == '!' && char_at(1) == '=') skip = 2, kind = TK_BANG_EQUAL;
 	else if (char_at(0) == '!') skip = 1, kind = TK_BANG;
+	else if (char_at(0) == '^') skip = 1, kind = TK_CARET;
+	else if (char_at(0) == ':') skip = 1, kind = TK_COLON;
+	else if (char_at(0) == ',') skip = 1, kind = TK_COMMA;
+	else if (char_at(0) == '-' && char_at(1) == '-') skip = 2, kind = TK_DASH_DASH;
+	else if (char_at(0) == '-' && char_at(1) == '>') skip = 2, kind = TK_DASH_RCHEVRON;
+	else if (char_at(0) == '-') skip = 1, kind = TK_DASH;
+	else if (char_at(0) == '.') skip = 1, kind = TK_DOT;
+	else if (char_at(0) == '=' && char_at(1) == '=') skip = 2, kind = TK_EQUAL_EQUAL;
+	else if (char_at(0) == '=') skip = 1, kind = TK_EQUAL;
+	else if (char_at(0) == '/') skip = 1, kind = TK_FSLASH;
+	else if (char_at(0) == '{') skip = 1, kind = TK_LBRACE;
+	else if (char_at(0) == '[') skip = 1, kind = TK_LBRACKET;
+	else if (char_at(0) == '<' && char_at(1) == '=') skip = 2, kind = TK_LCHEVRON_EQUAL;
+	else if (char_at(0) == '<' && char_at(1) == '<') skip = 2, kind = TK_LCHEVRON_LCHEVRON;
+	else if (char_at(0) == '<') skip = 1, kind = TK_LCHEVRON;
+	else if (char_at(0) == '(') skip = 1, kind = TK_LPAREN;
+	else if (char_at(0) == '%') skip = 1, kind = TK_MOD;
+	else if (char_at(0) == '|' && char_at(1) == '|') skip = 2, kind = TK_PIPE_PIPE;
+	else if (char_at(0) == '|') skip = 1, kind = TK_PIPE;
+	else if (char_at(0) == '+' && char_at(1) == '+') skip = 2, kind = TK_PLUS_PLUS;
+	else if (char_at(0) == '+') skip = 1, kind = TK_PLUS;
+	else if (char_at(0) == '?') skip = 1, kind = TK_QUESTION;
+	else if (char_at(0) == '}') skip = 1, kind = TK_RBRACE;
+	else if (char_at(0) == ']') skip = 1, kind = TK_RBRACKET;
+	else if (char_at(0) == '>' && char_at(1) == '=') skip = 2, kind = TK_RCHEVRON_EQUAL;
+	else if (char_at(0) == '>' && char_at(1) == '>') skip = 2, kind = TK_RCHEVRON_RCHEVRON;
+	else if (char_at(0) == '>') skip = 1, kind = TK_RCHEVRON;
+	else if (char_at(0) == ')') skip = 1, kind = TK_RPAREN;
+	else if (char_at(0) == ';') skip = 1, kind = TK_SEMICOLON;
+	else if (char_at(0) == '*') skip = 1, kind = TK_STAR;
+	else if (char_at(0) == '~') skip = 1, kind = TK_TILDE;
 
 	if (kind != -1) {
 		char_skip(skip);
