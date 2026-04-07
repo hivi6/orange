@@ -22,6 +22,7 @@ static char is_whitespace(char ch);
 static char char_at(int offset);
 static void char_skip(int inc);
 static void token_append(int kind);
+static char keyword_kind();
 
 // ========================================
 // token.h - definition
@@ -150,6 +151,11 @@ static void generate_token() {
 	else if (char_at(0) == ';') skip = 1, kind = TK_SEMICOLON;
 	else if (char_at(0) == '*') skip = 1, kind = TK_STAR;
 	else if (char_at(0) == '~') skip = 1, kind = TK_TILDE;
+	else if (isalpha(char_at(0)) || char_at(0) == '_') {
+		skip = 0;
+		while (isalnum(char_at(0)) || char_at(0) == '_') char_skip(1);
+		kind = keyword_kind();
+	}
 
 	if (kind != -1) {
 		char_skip(skip);
@@ -232,5 +238,23 @@ static void token_append(int kind) {
 	if (g_head == NULL) g_head = res;
 	else g_tail->next = res;
 	g_tail = res;
+}
+
+static char keyword_kind() {
+	int len = g_cur_pos.index - g_prev_pos.index;
+	const char *src = g_source + g_prev_pos.index;
+
+	if (strlen("break") == len && strncmp(src, "break", len) == 0) return TK_BREAK_KEYWORD;
+	else if (strlen("continue") == len && strncmp(src, "continue", len) == 0) return TK_CONTINUE_KEYWORD;
+	else if (strlen("defer") == len && strncmp(src, "defer", len) == 0) return TK_DEFER_KEYWORD;
+	else if (strlen("else") == len && strncmp(src, "else", len) == 0) return TK_ELSE_KEYWORD;
+	else if (strlen("fn") == len && strncmp(src, "fn", len) == 0) return TK_FN_KEYWORD;
+	else if (strlen("if") == len && strncmp(src, "if", len) == 0) return TK_IF_KEYWORD;
+	else if (strlen("return") == len && strncmp(src, "return", len) == 0) return TK_RETURN_KEYWORD;
+	else if (strlen("sizeof") == len && strncmp(src, "sizeof", len) == 0) return TK_SIZEOF_KEYWORD;
+	else if (strlen("struct") == len && strncmp(src, "struct", len) == 0) return TK_STRUCT_KEYWORD;
+	else if (strlen("var") == len && strncmp(src, "var", len) == 0) return TK_VAR_KEYWORD;
+	else if (strlen("while") == len && strncmp(src, "while", len) == 0) return TK_WHILE_KEYWORD;
+	return TK_IDENTIFIER;
 }
 
