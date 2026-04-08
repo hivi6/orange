@@ -26,6 +26,8 @@ static char keyword_kind();
 static void char_literal_skip();
 static void escape_character_skip();
 static void str_literal_skip();
+static char is_octal(char ch);
+static char is_hexadecimal(char ch);
 
 // ========================================
 // token.h - definition
@@ -311,7 +313,7 @@ static void char_literal_skip() {
 static void escape_character_skip() {
 	char_skip(1); // skip backslash
 
-	const char *escape_char = "ntbra'\"?\\fv0";
+	const char *escape_char = "ntbra'\"?\\fv";
 	int is_escape_char = 0;
 	for (int i = 0; escape_char[i]; i++) {
 		if (escape_char[i] == char_at(0)) {
@@ -321,6 +323,49 @@ static void escape_character_skip() {
 	}
 	if (is_escape_char) {
 		char_skip(1);
+		return;
+	}
+
+	if (char_at(0) == '0') {
+		// skip octal escape sequence
+		char_skip(1);
+		int len = 0;
+		while (is_octal(char_at(0))) {
+			char_skip(1);
+			len++;
+		}
+
+		if (len > 3) {
+			eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos,
+				"Octal escape sequence length should be <= 3");
+			exit(1);
+		}
+
+		return;
+	}
+
+	if (char_at(0) == 'x') {
+		// skip hexa-decimal escape sequence
+		char_skip(1);
+
+		int len = 0;
+		while (is_hexadecimal(char_at(0))) {
+			char_skip(1);
+			len++;
+		}
+
+		if (len == 0) {
+			eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos,
+				"Empty hexadecimal escape sequence");
+			exit(1);
+		}
+
+		if (len > 2) {
+			eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos,
+				"Hexadecimal escape sequence length should be <= 2");
+			exit(1);
+		}
+
 		return;
 	}
 
@@ -356,5 +401,13 @@ static void str_literal_skip() {
 	}
 
 	char_skip(1); // skip double quote
+}
+
+static char is_octal(char ch) {
+	return '0' <= ch && ch <= '7';
+}
+
+static char is_hexadecimal(char ch) {
+	return '0' <= ch && ch <= '9' || ('a' <= ch && ch <= 'f' || 'A' <= ch && ch <= 'F');
 }
 
