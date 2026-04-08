@@ -23,6 +23,8 @@ static char char_at(int offset);
 static void char_skip(int inc);
 static void token_append(int kind);
 static char keyword_kind();
+static void char_literal_skip();
+static void escape_character_skip();
 
 // ========================================
 // token.h - definition
@@ -164,6 +166,11 @@ static void generate_token() {
 		
 		kind = TK_INT_LITERAL;
 	}
+	else if (char_at(0) == '\'') {
+		skip = 0;
+		char_literal_skip();
+		kind = TK_CHAR_LITERAL;
+	}
 
 	if (kind != -1) {
 		char_skip(skip);
@@ -264,5 +271,56 @@ static char keyword_kind() {
 	else if (strlen("var") == len && strncmp(src, "var", len) == 0) return TK_VAR_KEYWORD;
 	else if (strlen("while") == len && strncmp(src, "while", len) == 0) return TK_WHILE_KEYWORD;
 	return TK_IDENTIFIER;
+}
+
+static void char_literal_skip() {
+	char_skip(1); // skip single quote
+
+	if (32 <= char_at(0) && char_at(0) < 127 && char_at(0) != '\'' && char_at(0) != '\\') {
+		// skip the printable character that is not single quote or backslash
+		char_skip(1);
+	}
+	else if (char_at(0) == '\\') {
+		// skip escape character
+		escape_character_skip();
+	}
+	else {
+		// no such rule, so this should cause error
+		char_skip(1);
+		eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos, 
+			"Expected printable character or starting of excape character");
+		exit(1);
+	}
+
+	if (char_at(0) != '\'') {
+		char_skip(1);
+		eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos, 
+			"Expected single quote");
+		exit(1);
+	}
+
+	char_skip(1); // skip single quote
+}
+
+static void escape_character_skip() {
+	char_skip(1); // skip backslash
+
+	const char *escape_char = "ntbra'\"?\\fv0";
+	int is_escape_char = 0;
+	for (int i = 0; escape_char[i]; i++) {
+		if (escape_char[i] == char_at(0)) {
+			is_escape_char = 1;
+			break;
+		}
+	}
+	if (is_escape_char) {
+		char_skip(1);
+		return;
+	}
+
+	char_skip(1);
+	eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos,
+		"Unexpected escape sequence");
+	exit(1);
 }
 
