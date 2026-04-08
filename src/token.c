@@ -25,6 +25,7 @@ static void token_append(int kind);
 static char keyword_kind();
 static void char_literal_skip();
 static void escape_character_skip();
+static void str_literal_skip();
 
 // ========================================
 // token.h - definition
@@ -170,6 +171,11 @@ static void generate_token() {
 		skip = 0;
 		char_literal_skip();
 		kind = TK_CHAR_LITERAL;
+	}
+	else if (char_at(0) == '\"') {
+		skip = 0;
+		str_literal_skip();
+		kind = TK_STR_LITERAL;
 	}
 
 	if (kind != -1) {
@@ -322,5 +328,33 @@ static void escape_character_skip() {
 	eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos,
 		"Unexpected escape sequence");
 	exit(1);
+}
+
+static void str_literal_skip() {
+	char_skip(1); // skip double quote
+
+	while (!is_eof() && char_at(0) != '"') {
+		if (32 <= char_at(0) && char_at(0) < 127 && char_at(0) != '\\') {
+			char_skip(1);
+		}
+		else if (char_at(0) == '\\') {
+			// skip escape character
+			escape_character_skip();
+		}
+		else {
+			char_skip(1);
+			eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos,
+				"Not a printable character or an escape sequence");
+			exit(1);
+		}
+	}
+
+	if (is_eof()) {
+		eprintf(g_filepath, g_source, g_prev_pos, g_cur_pos,
+			"Expected double quote but instead reached eof");
+		exit(1);
+	}
+
+	char_skip(1); // skip double quote
 }
 
