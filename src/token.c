@@ -34,6 +34,7 @@ static char is_hexadecimal(char ch);
 // ========================================
 
 const char *token_kind_str(int kind) {
+	if (kind == TK_EOF) return "TK_EOF";
 	if (kind == TK_AMPERSAND) return "TK_AMPERSAND";
 	if (kind == TK_AMPERSAND_AMPERSAND) return "TK_AMPERSAND_AMPERSAND";
 	if (kind == TK_BANG) return "TK_BANG";
@@ -93,6 +94,7 @@ token_t *generate_tokens(const char *filepath) {
 	while (!is_eof()) {
 		generate_token();
 	}
+	token_append(TK_EOF);
 
 	return g_head;
 }

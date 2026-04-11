@@ -4,7 +4,9 @@
 #include "pos.h"
 
 enum {
-	TK_AMPERSAND = 0,
+	TK_EOF = 0,
+
+	TK_AMPERSAND,
 	TK_AMPERSAND_AMPERSAND,
 	TK_BANG,
 	TK_BANG_EQUAL,
