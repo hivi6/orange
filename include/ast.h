@@ -8,6 +8,8 @@
 enum {
 	AST_LITERAL = 0,
 	AST_BINARY,
+	AST_TERNARY,
+	AST_PREFIX,
 };
 
 struct ast_t {
@@ -20,10 +22,18 @@ struct ast_t {
 	// For AST_LITERAL
 	token_t *literal;
 
-	// For AST_BINARY
+	// For AST_BINARY, AST_TERNARY
 	struct ast_t *left;
+
+	// For AST_BINARY, AST_PREFIX
 	token_t *op;
+
+	// For AST_BINARY, AST_TERNARY, AST_PREFIX
 	struct ast_t *right;
+
+	// For AST_TERNARY
+	struct ast_t *mid;
+	
 };
 
 typedef struct ast_t ast_t;

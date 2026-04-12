@@ -25,7 +25,7 @@ GRAMMAR
 <expr-stmt>     := <expr> SEMICOLON
 
 <expr>          := <assign-expr>
-<assign-expr>   := <ternary-expr> (EQUAL <assign-expr>)?
+<assign-expr>   := <ternary-expr> (EQUAL <ternary-expr>)?
 <ternary-expr>  := <lor-expr> (QUESTION <ternary-expr> COLON <ternary-expr>)?
 <lor-expr>      := <land-expr> (PIPE_PIPE <land-expr>)*
 <land-expr>     := <bor-expr> (AMPERSAND_AMPERSAND <bor-expr>)*
