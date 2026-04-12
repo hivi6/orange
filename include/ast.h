@@ -7,6 +7,7 @@
 
 enum {
 	AST_LITERAL = 0,
+	AST_BINARY,
 };
 
 struct ast_t {
@@ -16,8 +17,13 @@ struct ast_t {
 	pos_t start;
 	pos_t end;
 
-	// literal
+	// For AST_LITERAL
 	token_t *literal;
+
+	// For AST_BINARY
+	struct ast_t *left;
+	token_t *op;
+	struct ast_t *right;
 };
 
 typedef struct ast_t ast_t;
