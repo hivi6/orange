@@ -42,13 +42,13 @@ GRAMMAR
                  | (BANG | TILDE) <prefix-expr>
                  | (STAR | AMPERSAND) <prefix-expr>
                  | SIZEOF_KEYWORD <prefix-expr>
-		 | LPAREN <expr> RPAREN
                  | <postfix-expr>
 <postfix-expr>  := <primary-expr> (PLUS_PLUS | DASH_DASH | <fn-call> | <arr-access> | <member-access>)*
-<primary-expr>  := INT_LITERAL | CHAR_LITERAL | STR_LITERAL | IDENTIFIER
+<primary-expr>  := INT_LITERAL | CHAR_LITERAL | STR_LITERAL | IDENTIFIER | <grouping>
 <fn-call>       := LPAREN <fn-args>? RPAREN
 <arr-access>    := LBRACKET <expr> RBRACKET
 <member-access> := (DOT | DASH_RCHEVRON) IDENTIFIER
+<grouping>      := LPAREN <expr> RPAREN
 
 ========================================
 TOKENS

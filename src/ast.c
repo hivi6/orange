@@ -30,6 +30,7 @@ static ast_t *shift_expr();
 static ast_t *add_expr();
 static ast_t *mul_expr();
 static ast_t *prefix_expr();
+static ast_t *postfix_expr();
 static ast_t *primary_expr();
 
 static ast_t *malloc_ast(int kind, const char *filepath, const char *source,
@@ -38,6 +39,8 @@ static ast_t *malloc_ast_literal(token_t *literal);
 static ast_t *malloc_ast_binary(ast_t *left, token_t *op, ast_t *right);
 static ast_t *malloc_ast_ternary(ast_t *left, ast_t *mid, ast_t *right);
 static ast_t *malloc_ast_prefix(token_t *op, ast_t *right);
+static ast_t *malloc_ast_postfix(ast_t *left, token_t *op);
+static ast_t *malloc_ast_group(token_t *lparen, ast_t *group, token_t *rparen);
 
 // ========================================
 // ast.h - definition
@@ -86,8 +89,8 @@ static void print_ast_helper(ast_t *ast, char *tree, int index) {
 		print_token(ast->literal);
 		printf(")\n");
 		tree[index+1] = 0;
-
 		break;
+
 	case AST_BINARY:
 		printf("+- AST_BINARY (");
 		print_token(ast->op);
@@ -114,6 +117,22 @@ static void print_ast_helper(ast_t *ast, char *tree, int index) {
 
 		tree[index+1] = 0;
 		print_ast_helper(ast->right, tree, index+1);
+		break;
+
+	case AST_POSTFIX:
+		printf("+- AST_POSTFIX(");
+		print_token(ast->op);
+		printf(")\n");
+
+		tree[index+1] = 0;
+		print_ast_helper(ast->left, tree, index+1);
+		break;
+
+	case AST_GROUP:
+		printf("+- AST_GROUP\n");
+		
+		tree[index+1] = 0;
+		print_ast_helper(ast->left, tree, index+1);
 		break;
 	}
 }
@@ -309,37 +328,27 @@ static ast_t *prefix_expr() {
 	case TK_TILDE:
 	case TK_STAR:
 	case TK_AMPERSAND:
-	case TK_SIZEOF_KEYWORD:
-	case TK_LPAREN: {
+	case TK_SIZEOF_KEYWORD: {
 		token_t *op = token_at(0);
 		token_skip(1);
-
-		ast_t *right = NULL;
-		if (op->kind == TK_LPAREN) {
-			right = expr();
-		}
-		else {
-			right = prefix_expr();
-		}
-
-		if (op->kind == TK_LPAREN) {
-			token_t *rparen = token_at(0);
-			if (rparen->kind != TK_RPAREN) {
-				eprintf(rparen->filepath, rparen->source, rparen->start, rparen->end,
-					"Expeceted ')'");
-				exit(1);
-			}
-			token_skip(1); // skip )
-		}
-
-		if (op->kind == TK_LPAREN) {
-			return right;
-		}
+		ast_t *right = prefix_expr();
 		return malloc_ast_prefix(op, right);
 	}
 	}
 
-	return primary_expr();
+	return postfix_expr();
+}
+
+static ast_t *postfix_expr() {
+	ast_t *left = primary_expr();
+
+	token_t *op = token_at(0);
+	if (op->kind == TK_PLUS_PLUS || op->kind == TK_DASH_DASH) {
+		token_skip(1);
+		return malloc_ast_postfix(left, op);
+	}
+
+	return left;
 }
 
 static ast_t *primary_expr() {
@@ -351,6 +360,23 @@ static ast_t *primary_expr() {
 	case TK_STR_LITERAL: {
 		token_skip(1);
 		return malloc_ast_literal(token);
+	}
+
+	case TK_LPAREN: {
+		token_t *lparen = token_at(0);
+		token_skip(1); // skip (
+		
+		ast_t *group = expr();
+
+		token_t *rparen = token_at(0);
+		if (rparen->kind != TK_RPAREN) {
+			eprintf(rparen->filepath, rparen->source, rparen->start, rparen->end,
+				"Expected ')'");
+			exit(1);
+		}
+		token_skip(1); // skip )
+
+		return malloc_ast_group(lparen, group, rparen);
 	}
 	}
 
@@ -400,6 +426,21 @@ static ast_t *malloc_ast_prefix(token_t *op, ast_t *right) {
 		op->start, right->end);
 	res->op = op;
 	res->right = right;
+	return res;
+}
+
+static ast_t *malloc_ast_postfix(ast_t *left, token_t *op) {
+	ast_t *res = malloc_ast(AST_POSTFIX, op->filepath, op->source,
+		op->start, op->end);
+	res->left = left;
+	res->op = op;
+	return res;
+}
+
+static ast_t *malloc_ast_group(token_t *lparen, ast_t *group, token_t *rparen) {
+	ast_t *res = malloc_ast(AST_GROUP, group->filepath, group->source,
+		lparen->start, rparen->end);
+	res->left = group;
 	return res;
 }
 
