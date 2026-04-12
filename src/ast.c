@@ -342,10 +342,12 @@ static ast_t *prefix_expr() {
 static ast_t *postfix_expr() {
 	ast_t *left = primary_expr();
 
-	token_t *op = token_at(0);
-	if (op->kind == TK_PLUS_PLUS || op->kind == TK_DASH_DASH) {
-		token_skip(1);
-		return malloc_ast_postfix(left, op);
+	while (token_at(0)->kind == TK_PLUS_PLUS || token_at(0)->kind == TK_DASH_DASH) {
+		token_t *op = token_at(0);
+		if (op->kind == TK_PLUS_PLUS || op->kind == TK_DASH_DASH) {
+			token_skip(1);
+			left = malloc_ast_postfix(left, op);
+		}
 	}
 
 	return left;
