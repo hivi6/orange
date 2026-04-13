@@ -42,6 +42,7 @@ static ast_t *malloc_ast_prefix(token_t *op, ast_t *right);
 static ast_t *malloc_ast_postfix(ast_t *left, token_t *op);
 static ast_t *malloc_ast_group(token_t *lparen, ast_t *group, token_t *rparen);
 static ast_t *malloc_ast_array_access(ast_t *left, token_t *lbracket, ast_t *access, token_t *rbracket);
+static ast_t *malloc_ast_member_access(ast_t *left, token_t *op, token_t *id);
 
 // ========================================
 // ast.h - definition
@@ -142,6 +143,17 @@ static void print_ast_helper(ast_t *ast, char *tree, int index) {
 		print_ast_helper(ast->left, tree, index+1);
 		tree[index+1] = 0;
 		print_ast_helper(ast->right, tree, index+1);
+		break;
+
+	case AST_MEMBER_ACCESS:
+		printf("+- AST_MEMBER_ACCESS(");
+		print_token(ast->op);
+		printf(", ");
+		print_token(ast->identifier);
+		printf(")\n");
+
+		tree[index+1] = 0;
+		print_ast_helper(ast->left, tree, index+1);
 		break;
 	}
 }
@@ -352,7 +364,8 @@ static ast_t *postfix_expr() {
 	ast_t *left = primary_expr();
 
 	while (token_at(0)->kind == TK_PLUS_PLUS || token_at(0)->kind == TK_DASH_DASH ||
-		token_at(0)->kind == TK_LBRACKET) {
+		token_at(0)->kind == TK_LBRACKET || token_at(0)->kind == TK_DOT ||
+		token_at(0)->kind == TK_DASH_RCHEVRON) {
 		token_t *op = token_at(0);
 		if (op->kind == TK_PLUS_PLUS || op->kind == TK_DASH_DASH) {
 			token_skip(1);
@@ -372,6 +385,19 @@ static ast_t *postfix_expr() {
 			token_skip(1); // skip ]
 		
 			left = malloc_ast_array_access(left, lbracket, access, rbracket);
+		}
+		else if (op->kind == TK_DOT || op->kind == TK_DASH_RCHEVRON) {
+			token_skip(1); // skip . or ->
+			
+			token_t *id = token_at(0);
+			if (id->kind != TK_IDENTIFIER) {
+				eprintf(id->filepath, id->source, id->start, id->end,
+					"Expected an identifier");
+				exit(1);
+			}
+			token_skip(1);
+
+			left = malloc_ast_member_access(left, op, id);
 		}
 	}
 
@@ -476,6 +502,15 @@ static ast_t *malloc_ast_array_access(ast_t *left, token_t *lbracket, ast_t *acc
 		left->start, rbracket->end);
 	res->left = left;
 	res->right = access;
+	return res;
+}
+
+static ast_t *malloc_ast_member_access(ast_t *left, token_t *op, token_t *id) {
+	ast_t *res = malloc_ast(AST_MEMBER_ACCESS, left->filepath, left->source,
+		left->start, id->end);
+	res->left = left;
+	res->op = op;
+	res->identifier = id;
 	return res;
 }
 
