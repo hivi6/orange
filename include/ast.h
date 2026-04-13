@@ -12,6 +12,7 @@ enum {
 	AST_GROUP,
 	AST_PREFIX,
 	AST_POSTFIX,
+	AST_ARR_ACCESS,
 };
 
 struct ast_t {
@@ -24,13 +25,13 @@ struct ast_t {
 	// For AST_LITERAL
 	token_t *literal;
 
-	// For AST_BINARY, AST_TERNARY, AST_POSTFIX, AST_GROUP
+	// For AST_BINARY, AST_TERNARY, AST_POSTFIX, AST_GROUP, AST_ARR_ACCESS
 	struct ast_t *left;
 
 	// For AST_BINARY, AST_PREFIX, AST_POSTFIX
 	token_t *op;
 
-	// For AST_BINARY, AST_TERNARY, AST_PREFIX
+	// For AST_BINARY, AST_TERNARY, AST_PREFIX, AST_ARR_ACCESS
 	struct ast_t *right;
 
 	// For AST_TERNARY

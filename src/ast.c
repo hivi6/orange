@@ -41,6 +41,7 @@ static ast_t *malloc_ast_ternary(ast_t *left, ast_t *mid, ast_t *right);
 static ast_t *malloc_ast_prefix(token_t *op, ast_t *right);
 static ast_t *malloc_ast_postfix(ast_t *left, token_t *op);
 static ast_t *malloc_ast_group(token_t *lparen, ast_t *group, token_t *rparen);
+static ast_t *malloc_ast_arr_access(ast_t *left, token_t *lbracket, ast_t *access, token_t *rbracket);
 
 // ========================================
 // ast.h - definition
@@ -133,6 +134,14 @@ static void print_ast_helper(ast_t *ast, char *tree, int index) {
 		
 		tree[index+1] = 0;
 		print_ast_helper(ast->left, tree, index+1);
+		break;
+
+	case AST_ARR_ACCESS:
+		printf("+- AST_ARR_ACCESS\n");
+		
+		print_ast_helper(ast->left, tree, index+1);
+		tree[index+1] = 0;
+		print_ast_helper(ast->right, tree, index+1);
 		break;
 	}
 }
@@ -342,11 +351,27 @@ static ast_t *prefix_expr() {
 static ast_t *postfix_expr() {
 	ast_t *left = primary_expr();
 
-	while (token_at(0)->kind == TK_PLUS_PLUS || token_at(0)->kind == TK_DASH_DASH) {
+	while (token_at(0)->kind == TK_PLUS_PLUS || token_at(0)->kind == TK_DASH_DASH ||
+		token_at(0)->kind == TK_LBRACKET) {
 		token_t *op = token_at(0);
 		if (op->kind == TK_PLUS_PLUS || op->kind == TK_DASH_DASH) {
 			token_skip(1);
 			left = malloc_ast_postfix(left, op);
+		}
+		else if (op->kind == TK_LBRACKET) {
+			token_t *lbracket = token_at(0);
+			token_skip(1); // skip [
+
+			ast_t *access = expr();
+			token_t *rbracket = token_at(0);
+			if (rbracket->kind != TK_RBRACKET) {
+				eprintf(rbracket->filepath, rbracket->source, rbracket->start, rbracket->end,
+					"Expected ']'");
+				exit(1);
+			}
+			token_skip(1); // skip ]
+		
+			left = malloc_ast_arr_access(left, lbracket, access, rbracket);
 		}
 	}
 
@@ -443,6 +468,14 @@ static ast_t *malloc_ast_group(token_t *lparen, ast_t *group, token_t *rparen) {
 	ast_t *res = malloc_ast(AST_GROUP, group->filepath, group->source,
 		lparen->start, rparen->end);
 	res->left = group;
+	return res;
+}
+
+static ast_t *malloc_ast_arr_access(ast_t *left, token_t *lbracket, ast_t *access, token_t *rbracket) {
+	ast_t *res = malloc_ast(AST_ARR_ACCESS, left->filepath, left->source,
+		left->start, rbracket->end);
+	res->left = left;
+	res->right = access;
 	return res;
 }
 
