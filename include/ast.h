@@ -12,7 +12,7 @@ enum {
 	AST_GROUP,
 	AST_PREFIX,
 	AST_POSTFIX,
-	AST_ARR_ACCESS,
+	AST_ARRAY_ACCESS,
 };
 
 struct ast_t {
