@@ -36,6 +36,7 @@ static ast_t *primary_expr();
 static ast_t *malloc_ast(int kind, const char *filepath, const char *source,
 	pos_t start, pos_t end);
 static ast_t *malloc_ast_literal(token_t *literal);
+static ast_t *malloc_ast_identifier(token_t *identifier);
 static ast_t *malloc_ast_binary(ast_t *left, token_t *op, ast_t *right);
 static ast_t *malloc_ast_ternary(ast_t *left, ast_t *mid, ast_t *right);
 static ast_t *malloc_ast_prefix(token_t *op, ast_t *right);
@@ -89,6 +90,13 @@ static void print_ast_helper(ast_t *ast, char *tree, int index) {
 	case AST_LITERAL:
 		printf("+- AST_LITERAL (");
 		print_token(ast->literal);
+		printf(")\n");
+		tree[index+1] = 0;
+		break;
+
+	case AST_IDENTIFIER:
+		printf("+- AST_IDENTIFIER (");
+		print_token(ast->identifier);
 		printf(")\n");
 		tree[index+1] = 0;
 		break;
@@ -415,6 +423,11 @@ static ast_t *primary_expr() {
 		return malloc_ast_literal(token);
 	}
 
+	case TK_IDENTIFIER: {
+		token_skip(1);
+		return malloc_ast_identifier(token);
+	}
+
 	case TK_LPAREN: {
 		token_t *lparen = token_at(0);
 		token_skip(1); // skip (
@@ -453,6 +466,13 @@ static ast_t *malloc_ast_literal(token_t *literal) {
 	ast_t *res = malloc_ast(AST_LITERAL, literal->filepath, literal->source,
 		literal->start, literal->end);
 	res->literal = literal;
+	return res;
+}
+
+static ast_t *malloc_ast_identifier(token_t *identifier) {
+	ast_t *res = malloc_ast(AST_IDENTIFIER, identifier->filepath, identifier->source,
+		identifier->start, identifier->end);
+	res->identifier = identifier;
 	return res;
 }
 
