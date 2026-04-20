@@ -10,6 +10,7 @@ enum {
 	AST_LITERAL_EXPR,
 	AST_VAR_EXPR,
 	AST_GROUP_EXPR,
+	AST_BINARY_EXPR,
 };
 
 struct ast_t {
@@ -34,6 +35,13 @@ struct ast_t {
 		struct {
 			struct ast_t *expr;
 		} group_expr;
+
+		// AST_BINARY_EXPR
+		struct {
+			struct ast_t *left;
+			token_t *op;
+			struct ast_t *right;
+		} binary_expr;
 	} ast;
 };
 

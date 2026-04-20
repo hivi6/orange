@@ -21,8 +21,10 @@ static ast_t *malloc_ast(int kind, const char *filepath, const char *source,
 static ast_t *malloc_ast_literal_expr(token_t *token);
 static ast_t *malloc_ast_var_expr(token_t *token);
 static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rparen);
+static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
 
 static ast_t *expr();
+static ast_t *mul_expr();
 static ast_t *primary_expr();
 
 // ========================================
@@ -98,6 +100,17 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_BINARY_EXPR: {
+		printf("+- AST_BINARY_EXPR(");
+		print_token(ast->ast.binary_expr.op);
+		printf(")\n");
+
+		print_ast_helper(ast->ast.binary_expr.left, depth, index+1);
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.binary_expr.right, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -146,8 +159,31 @@ static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rpare
 	return ast;
 }
 
+static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right) {
+	ast_t *ast = malloc_ast(AST_BINARY_EXPR, left->filepath, left->source,
+		left->start, right->end);
+	ast->ast.binary_expr.left = left;
+	ast->ast.binary_expr.op = op;
+	ast->ast.binary_expr.right = right;
+	return ast;
+}
+
 static ast_t *expr() {
-	return primary_expr();
+	return mul_expr();
+}
+
+static ast_t *mul_expr() {
+	ast_t *left = primary_expr();
+	while (token_at(0)->kind == TK_STAR || token_at(0)->kind == TK_FSLASH ||
+		token_at(0)->kind == TK_MOD) {
+		token_t *op = token_at(0);
+		token_skip(1);
+
+		ast_t *right = primary_expr();
+
+		left = malloc_ast_binary_expr(left, op, right);
+	}
+	return left;
 }
 
 static ast_t *primary_expr() {
