@@ -19,6 +19,7 @@ static void print_token(token_t *token);
 static ast_t *malloc_ast(int kind, const char *filepath, const char *source,
 	pos_t start, pos_t end);
 static ast_t *malloc_ast_literal_expr(token_t *token);
+static ast_t *malloc_ast_var_expr(token_t *token);
 
 static ast_t *expr();
 static ast_t *primary_expr();
@@ -80,6 +81,13 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		depth[index+1] = 0;
 		break;
 	}
+	case AST_VAR_EXPR: {
+		printf("+- AST_VAR_EXPR(");
+		print_token(ast->ast.literal_expr.token);
+		printf(")\n");
+		depth[index+1] = 0;
+		break;
+	}
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -114,6 +122,13 @@ static ast_t *malloc_ast_literal_expr(token_t *token) {
 	return ast;
 }
 
+static ast_t *malloc_ast_var_expr(token_t *token) {
+	ast_t *ast = malloc_ast(AST_VAR_EXPR, token->filepath, token->source, 
+		token->start, token->end);
+	ast->ast.var_expr.token = token;
+	return ast;
+}
+
 static ast_t *expr() {
 	return primary_expr();
 }
@@ -126,6 +141,11 @@ static ast_t *primary_expr() {
 		token_t *token = token_at(0);
 		token_skip(1);
 		return malloc_ast_literal_expr(token);
+	}
+	case TK_IDENTIFIER: {
+		token_t *token = token_at(0);
+		token_skip(1);
+		return malloc_ast_var_expr(token);
 	}
 	}
 
