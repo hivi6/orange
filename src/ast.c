@@ -24,6 +24,7 @@ static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rpare
 static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
 
 static ast_t *expr();
+static ast_t *land_expr();
 static ast_t *bor_expr();
 static ast_t *bxor_expr();
 static ast_t *band_expr();
@@ -140,10 +141,11 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 }
 
 static void print_token(token_t *token) {
-	printf("%s | ", token_kind_str(token->kind));
+	printf("%s | '", token_kind_str(token->kind));
 	for (int i = token->start.index; i < token->end.index; i++) {
 		printf("%c", token->source[i]);
 	}
+	printf("'");
 }
 
 static ast_t *malloc_ast(int kind, const char *filepath, const char *source,
@@ -188,7 +190,20 @@ static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right) {
 }
 
 static ast_t *expr() {
-	return bor_expr();
+	return land_expr();
+}
+
+static ast_t *land_expr() {
+	ast_t *left = bor_expr();
+	while (token_at(0)->kind == TK_AMPERSAND_AMPERSAND) {
+		token_t *op = token_at(0);
+		token_skip(1);
+
+		ast_t *right = bor_expr();
+
+		left = malloc_ast_binary_expr(left, op, right);
+	}
+	return left;
 }
 
 static ast_t *bor_expr() {
