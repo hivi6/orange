@@ -64,6 +64,7 @@ int main(int argc, const char **argv) {
 			}
 			printf("\n\n");
 		}
+		return 0;
 	}
 
 	ast_t *ast = parse(tokens);

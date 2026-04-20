@@ -4,12 +4,25 @@
 #include "pos.h"
 #include "token.h"
 
+#define AST_PRINT_DEPTH 1024
+
+enum {
+	AST_LITERAL_EXPR,
+};
+
 struct ast_t {
 	int kind;
 	const char *filepath;
 	const char *source;
 	pos_t start;
 	pos_t end;
+
+	union {
+		// AST_LITERAL_EXPR
+		struct {
+			token_t *token;
+		} literal_expr;
+	} ast;
 };
 
 typedef struct ast_t ast_t;
