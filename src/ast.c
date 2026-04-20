@@ -24,6 +24,7 @@ static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rpare
 static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
 
 static ast_t *expr();
+static ast_t *add_expr();
 static ast_t *mul_expr();
 static ast_t *primary_expr();
 
@@ -70,6 +71,11 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		return;
 	}
 
+	for (int i = 0; i < index+1; i++) {
+		if (i == index || depth[i]) printf("|  ");
+		else printf("   ");
+	}
+	printf("\n");
 	for (int i = 0; i < index; i++) {
 		if (depth[i]) printf("|  ");
 		else printf("   ");
@@ -169,7 +175,20 @@ static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right) {
 }
 
 static ast_t *expr() {
-	return mul_expr();
+	return add_expr();
+}
+
+static ast_t *add_expr() {
+	ast_t *left = mul_expr();
+	while (token_at(0)->kind == TK_PLUS || token_at(0)->kind == TK_DASH) {
+		token_t *op = token_at(0);
+		token_skip(1);
+
+		ast_t *right = mul_expr();
+
+		left = malloc_ast_binary_expr(left, op, right);
+	}
+	return left;
 }
 
 static ast_t *mul_expr() {
