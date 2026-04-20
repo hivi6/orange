@@ -25,6 +25,7 @@ static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
 static ast_t *malloc_ast_ternary_expr(ast_t *left, ast_t *mid, ast_t *right);
 
 static ast_t *expr();
+static ast_t *assign_expr();
 static ast_t *ternary_expr();
 static ast_t *lor_expr();
 static ast_t *land_expr();
@@ -212,7 +213,20 @@ static ast_t *malloc_ast_ternary_expr(ast_t *left, ast_t *mid, ast_t *right) {
 }
 
 static ast_t *expr() {
-	return ternary_expr();
+	return assign_expr();
+}
+
+static ast_t *assign_expr() {
+	ast_t *left = ternary_expr();
+	while (token_at(0)->kind == TK_EQUAL) {
+		token_t *op = token_at(0);
+		token_skip(1);
+
+		ast_t *right = ternary_expr();
+
+		left = malloc_ast_binary_expr(left, op, right);
+	}
+	return left;
 }
 
 static ast_t *ternary_expr() {
