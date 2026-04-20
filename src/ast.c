@@ -20,6 +20,7 @@ static ast_t *malloc_ast(int kind, const char *filepath, const char *source,
 	pos_t start, pos_t end);
 static ast_t *malloc_ast_literal_expr(token_t *token);
 static ast_t *malloc_ast_var_expr(token_t *token);
+static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rparen);
 
 static ast_t *expr();
 static ast_t *primary_expr();
@@ -35,7 +36,7 @@ ast_t *parse(token_t *tokens) {
 }
 
 void print_ast(ast_t *ast) {
-	char depth[AST_PRINT_DEPTH];
+	char depth[AST_PRINT_DEPTH] = {};
 	printf("AST\n");
 	print_ast_helper(ast, depth, 0);
 }
@@ -81,6 +82,7 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		depth[index+1] = 0;
 		break;
 	}
+
 	case AST_VAR_EXPR: {
 		printf("+- AST_VAR_EXPR(");
 		print_token(ast->ast.literal_expr.token);
@@ -88,6 +90,14 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		depth[index+1] = 0;
 		break;
 	}
+
+	case AST_GROUP_EXPR: {
+		printf("+- AST_GROUP_EXPR\n");
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.group_expr.expr, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -129,6 +139,13 @@ static ast_t *malloc_ast_var_expr(token_t *token) {
 	return ast;
 }
 
+static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rparen) {
+	ast_t *ast = malloc_ast(AST_GROUP_EXPR, expr->filepath, expr->source,
+		lparen->start, rparen->end);
+	ast->ast.group_expr.expr = expr;
+	return ast;
+}
+
 static ast_t *expr() {
 	return primary_expr();
 }
@@ -146,6 +163,21 @@ static ast_t *primary_expr() {
 		token_t *token = token_at(0);
 		token_skip(1);
 		return malloc_ast_var_expr(token);
+	}
+	case TK_LPAREN: {
+		token_t *lparen = token_at(0);
+		token_skip(1); // skip (
+
+		ast_t *ast = expr();
+		token_t *rparen = token_at(0);
+		if (rparen->kind != TK_RPAREN) {
+			eprintf(rparen->filepath, rparen->source, ast->start, rparen->end,
+				"Expected ')' at the end of expression");
+			exit(1);
+		}
+		token_skip(1); // skip )
+
+		return malloc_ast_group_expr(lparen, ast, rparen);
 	}
 	}
 

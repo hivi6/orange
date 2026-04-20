@@ -9,6 +9,7 @@
 enum {
 	AST_LITERAL_EXPR,
 	AST_VAR_EXPR,
+	AST_GROUP_EXPR,
 };
 
 struct ast_t {
@@ -28,6 +29,11 @@ struct ast_t {
 		struct {
 			token_t *token;
 		} var_expr;
+
+		// AST_GROUP_EXPR
+		struct {
+			struct ast_t *expr;
+		} group_expr;
 	} ast;
 };
 
