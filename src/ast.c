@@ -24,6 +24,7 @@ static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rpare
 static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
 
 static ast_t *expr();
+static ast_t *relation_expr();
 static ast_t *shift_expr();
 static ast_t *add_expr();
 static ast_t *mul_expr();
@@ -176,7 +177,21 @@ static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right) {
 }
 
 static ast_t *expr() {
-	return shift_expr();
+	return relation_expr();
+}
+
+static ast_t *relation_expr() {
+	ast_t *left = shift_expr();
+	while (token_at(0)->kind == TK_LCHEVRON || token_at(0)->kind == TK_LCHEVRON_EQUAL || 
+		token_at(0)->kind == TK_RCHEVRON || token_at(0)->kind == TK_RCHEVRON_EQUAL) {
+		token_t *op = token_at(0);
+		token_skip(1);
+
+		ast_t *right = shift_expr();
+
+		left = malloc_ast_binary_expr(left, op, right);
+	}
+	return left;
 }
 
 static ast_t *shift_expr() {
