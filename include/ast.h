@@ -12,6 +12,7 @@ enum {
 	AST_GROUP_EXPR,
 	AST_BINARY_EXPR,
 	AST_TERNARY_EXPR,
+	AST_PREFIX_EXPR,
 };
 
 struct ast_t {
@@ -50,6 +51,12 @@ struct ast_t {
 			struct ast_t *mid;
 			struct ast_t *right;
 		} ternary_expr;
+
+		// AST_PREFIX_EXPR
+		struct {
+			token_t *op;
+			struct ast_t *right;
+		} prefix_expr;
 	} ast;
 };
 

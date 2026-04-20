@@ -23,6 +23,7 @@ static ast_t *malloc_ast_var_expr(token_t *token);
 static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rparen);
 static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
 static ast_t *malloc_ast_ternary_expr(ast_t *left, ast_t *mid, ast_t *right);
+static ast_t *malloc_ast_prefix_expr(token_t *op, ast_t *right);
 
 static ast_t *expr();
 static ast_t *assign_expr();
@@ -37,6 +38,7 @@ static ast_t *relation_expr();
 static ast_t *shift_expr();
 static ast_t *add_expr();
 static ast_t *mul_expr();
+static ast_t *prefix_expr();
 static ast_t *primary_expr();
 
 // ========================================
@@ -145,6 +147,16 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_PREFIX_EXPR: {
+		printf("+- AST_PREFIX_EXPR(");
+		print_token(ast->ast.prefix_expr.op);
+		printf(")\n");
+
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.prefix_expr.right, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -209,6 +221,14 @@ static ast_t *malloc_ast_ternary_expr(ast_t *left, ast_t *mid, ast_t *right) {
 	ast->ast.ternary_expr.left = left;
 	ast->ast.ternary_expr.mid = mid;
 	ast->ast.ternary_expr.right = right;
+	return ast;
+}
+
+static ast_t *malloc_ast_prefix_expr(token_t *op, ast_t *right) {
+	ast_t *ast = malloc_ast(AST_PREFIX_EXPR, op->filepath, op->source,
+		op->start, right->end);
+	ast->ast.prefix_expr.op = op;
+	ast->ast.prefix_expr.right = right;
 	return ast;
 }
 
@@ -370,17 +390,38 @@ static ast_t *add_expr() {
 }
 
 static ast_t *mul_expr() {
-	ast_t *left = primary_expr();
+	ast_t *left = prefix_expr();
 	while (token_at(0)->kind == TK_STAR || token_at(0)->kind == TK_FSLASH ||
 		token_at(0)->kind == TK_MOD) {
 		token_t *op = token_at(0);
 		token_skip(1);
 
-		ast_t *right = primary_expr();
+		ast_t *right = prefix_expr();
 
 		left = malloc_ast_binary_expr(left, op, right);
 	}
 	return left;
+}
+
+static ast_t *prefix_expr() {
+	switch (token_at(0)->kind) {
+	case TK_PLUS:
+	case TK_DASH:
+	case TK_PLUS_PLUS:
+	case TK_DASH_DASH:
+	case TK_BANG:
+	case TK_TILDE:
+	case TK_STAR:
+	case TK_AMPERSAND:
+	case TK_SIZEOF_KEYWORD: {
+		token_t *op = token_at(0);
+		token_skip(1);
+		ast_t *right = prefix_expr();
+		return malloc_ast_prefix_expr(op, right);
+	}
+	}
+
+	return primary_expr();
 }
 
 static ast_t *primary_expr() {
