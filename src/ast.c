@@ -24,6 +24,7 @@ static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rpare
 static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
 
 static ast_t *expr();
+static ast_t *bxor_expr();
 static ast_t *band_expr();
 static ast_t *equality_expr();
 static ast_t *relation_expr();
@@ -39,6 +40,13 @@ static ast_t *primary_expr();
 ast_t *parse(token_t *tokens) {
 	init(tokens);
 	ast_t *ast = expr();
+	if (token_at(0)->kind != TK_EOF) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, token->start, token->end,
+			"Expected EOF but got some token!");
+		exit(1);
+	}
+
 	return ast;
 }
 
@@ -179,12 +187,25 @@ static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right) {
 }
 
 static ast_t *expr() {
-	return band_expr();
+	return bxor_expr();
+}
+
+static ast_t *bxor_expr() {
+	ast_t *left = band_expr();
+	while (token_at(0)->kind == TK_CARET) {
+		token_t *op = token_at(0);
+		token_skip(1);
+
+		ast_t *right = band_expr();
+
+		left = malloc_ast_binary_expr(left, op, right);
+	}
+	return left;
 }
 
 static ast_t *band_expr() {
 	ast_t *left = equality_expr();
-	while (token_at(0)->kind == TK_AMPERSAND_AMPERSAND) {
+	while (token_at(0)->kind == TK_AMPERSAND) {
 		token_t *op = token_at(0);
 		token_skip(1);
 
