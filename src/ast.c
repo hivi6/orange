@@ -22,8 +22,10 @@ static ast_t *malloc_ast_literal_expr(token_t *token);
 static ast_t *malloc_ast_var_expr(token_t *token);
 static ast_t *malloc_ast_group_expr(token_t *lparen, ast_t *expr, token_t *rparen);
 static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
+static ast_t *malloc_ast_ternary_expr(ast_t *left, ast_t *mid, ast_t *right);
 
 static ast_t *expr();
+static ast_t *ternary_expr();
 static ast_t *lor_expr();
 static ast_t *land_expr();
 static ast_t *bor_expr();
@@ -132,6 +134,16 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_TERNARY_EXPR: {
+		printf("+- AST_TERNARY_EXPR\n");
+		
+		print_ast_helper(ast->ast.ternary_expr.left, depth, index+1);
+		print_ast_helper(ast->ast.ternary_expr.mid, depth, index+1);
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.ternary_expr.right, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -190,8 +202,39 @@ static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right) {
 	return ast;
 }
 
+static ast_t *malloc_ast_ternary_expr(ast_t *left, ast_t *mid, ast_t *right) {
+	ast_t *ast = malloc_ast(AST_TERNARY_EXPR, left->filepath, left->source,
+		left->start, right->end);
+	ast->ast.ternary_expr.left = left;
+	ast->ast.ternary_expr.mid = mid;
+	ast->ast.ternary_expr.right = right;
+	return ast;
+}
+
 static ast_t *expr() {
-	return lor_expr();
+	return ternary_expr();
+}
+
+static ast_t *ternary_expr() {
+	ast_t *left = lor_expr();
+	
+	if (token_at(0)->kind == TK_QUESTION) {
+		token_skip(1); // skip ?
+		ast_t *mid = ternary_expr();
+		
+		token_t *colon = token_at(0);
+		if (colon->kind != TK_COLON) {
+			eprintf(colon->filepath, colon->source, colon->start, colon->end,
+				"Expected ':'");
+			exit(1);
+		}
+		token_skip(1); // skip :
+		ast_t *right = ternary_expr();
+		
+		left = malloc_ast_ternary_expr(left, mid, right);
+	}
+
+	return left;
 }
 
 static ast_t *lor_expr() {

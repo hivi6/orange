@@ -11,6 +11,7 @@ enum {
 	AST_VAR_EXPR,
 	AST_GROUP_EXPR,
 	AST_BINARY_EXPR,
+	AST_TERNARY_EXPR,
 };
 
 struct ast_t {
@@ -42,6 +43,13 @@ struct ast_t {
 			token_t *op;
 			struct ast_t *right;
 		} binary_expr;
+
+		// AST_TERNARY_EXPR
+		struct {
+			struct ast_t *left;
+			struct ast_t *mid;
+			struct ast_t *right;
+		} ternary_expr;
 	} ast;
 };
 
