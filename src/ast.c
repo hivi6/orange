@@ -25,6 +25,8 @@ static ast_t *malloc_ast_binary_expr(ast_t *left, token_t *op, ast_t *right);
 static ast_t *malloc_ast_ternary_expr(ast_t *left, ast_t *mid, ast_t *right);
 static ast_t *malloc_ast_prefix_expr(token_t *op, ast_t *right);
 static ast_t *malloc_ast_postfix_expr(ast_t *left, token_t *op);
+static ast_t *malloc_ast_array_access_expr(ast_t *left, token_t *lbracket, ast_t *index, 
+	token_t *rbracket);
 
 static ast_t *expr();
 static ast_t *assign_expr();
@@ -169,6 +171,15 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_ARRAY_ACCESS_EXPR: {
+		printf("+- AST_ARRAY_ACCESS_EXPR\n");
+
+		print_ast_helper(ast->ast.array_access_expr.left, depth, index+1);
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.array_access_expr.index, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -249,6 +260,15 @@ static ast_t *malloc_ast_postfix_expr(ast_t *left, token_t *op) {
 		left->start, op->end);
 	ast->ast.postfix_expr.left = left;
 	ast->ast.postfix_expr.op = op;
+	return ast;
+}
+
+static ast_t *malloc_ast_array_access_expr(ast_t *left, token_t *lbracket, ast_t *index, 
+	token_t *rbracket) {
+	ast_t *ast = malloc_ast(AST_ARRAY_ACCESS_EXPR, left->filepath, left->source,
+		left->start, rbracket->end);
+	ast->ast.array_access_expr.left = left;
+	ast->ast.array_access_expr.index = index;
 	return ast;
 }
 
@@ -447,14 +467,38 @@ static ast_t *prefix_expr() {
 static ast_t *postfix_expr() {
 	ast_t *left = primary_expr();
 
-	switch (token_at(0)->kind) {
-	case TK_PLUS_PLUS:
-	case TK_DASH_DASH: {
-		token_t *op = token_at(0);
-		token_skip(1);
-		left = malloc_ast_postfix_expr(left, op);
-		break;
-	}
+	char keepGoing = 1;
+	while (keepGoing) {
+		switch (token_at(0)->kind) {
+		case TK_PLUS_PLUS:
+		case TK_DASH_DASH: {
+			token_t *op = token_at(0);
+			token_skip(1);
+			left = malloc_ast_postfix_expr(left, op);
+			break;
+		}
+
+		case TK_LBRACKET: {
+			token_t *lbracket = token_at(0);
+			token_skip(1); // skip [
+
+			ast_t *index = expr();
+			token_t *rbracket = token_at(0);
+			if (rbracket->kind != TK_RBRACKET) {
+				eprintf(rbracket->filepath, rbracket->source, left->start, rbracket->end,
+					"Expected ']'");
+				exit(1);
+			}
+			token_skip(1); // skip ]
+
+			left = malloc_ast_array_access_expr(left, lbracket, index, rbracket);
+			break;
+		}
+
+		default:
+			keepGoing = 0;
+			break;
+		}
 	}
 	return left;
 }

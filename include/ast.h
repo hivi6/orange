@@ -14,6 +14,7 @@ enum {
 	AST_TERNARY_EXPR,
 	AST_PREFIX_EXPR,
 	AST_POSTFIX_EXPR,
+	AST_ARRAY_ACCESS_EXPR,
 };
 
 struct ast_t {
@@ -64,6 +65,12 @@ struct ast_t {
 			struct ast_t *left;
 			token_t *op;
 		} postfix_expr;
+
+		// AST_ARRAY_ACCESS_EXPR
+		struct {
+			struct ast_t *left;
+			struct ast_t *index;
+		} array_access_expr;
 	} ast;
 };
 
