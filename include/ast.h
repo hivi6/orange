@@ -13,6 +13,7 @@ enum {
 	AST_BINARY_EXPR,
 	AST_TERNARY_EXPR,
 	AST_PREFIX_EXPR,
+	AST_POSTFIX_EXPR,
 };
 
 struct ast_t {
@@ -57,6 +58,12 @@ struct ast_t {
 			token_t *op;
 			struct ast_t *right;
 		} prefix_expr;
+
+		// AST_POSTFIX_EXPR
+		struct {
+			struct ast_t *left;
+			token_t *op;
+		} postfix_expr;
 	} ast;
 };
 
