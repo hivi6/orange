@@ -27,6 +27,7 @@ static ast_t *malloc_ast_prefix_expr(token_t *op, ast_t *right);
 static ast_t *malloc_ast_postfix_expr(ast_t *left, token_t *op);
 static ast_t *malloc_ast_array_access_expr(ast_t *left, token_t *lbracket, ast_t *index, 
 	token_t *rbracket);
+static ast_t *malloc_ast_member_access_expr(ast_t *left, token_t *op, token_t *member);
 
 static ast_t *expr();
 static ast_t *assign_expr();
@@ -180,6 +181,17 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_MEMBER_ACCESS_EXPR: {
+		printf("+- AST_MEMBER_ACCESS_EXPR(");
+		print_token(ast->ast.member_access_expr.op);
+		print_token(ast->ast.member_access_expr.member);
+		printf(")\n");
+
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.member_access_expr.left, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -269,6 +281,15 @@ static ast_t *malloc_ast_array_access_expr(ast_t *left, token_t *lbracket, ast_t
 		left->start, rbracket->end);
 	ast->ast.array_access_expr.left = left;
 	ast->ast.array_access_expr.index = index;
+	return ast;
+}
+
+static ast_t *malloc_ast_member_access_expr(ast_t *left, token_t *op, token_t *member) {
+	ast_t *ast = malloc_ast(AST_MEMBER_ACCESS_EXPR, left->filepath, left->source,
+		left->start, member->end);
+	ast->ast.member_access_expr.left = left;
+	ast->ast.member_access_expr.op = op;
+	ast->ast.member_access_expr.member = member;
 	return ast;
 }
 
@@ -492,6 +513,23 @@ static ast_t *postfix_expr() {
 			token_skip(1); // skip ]
 
 			left = malloc_ast_array_access_expr(left, lbracket, index, rbracket);
+			break;
+		}
+
+		case TK_DOT:
+		case TK_DASH_RCHEVRON: {
+			token_t *op = token_at(0);
+			token_skip(1); // skip . or ->
+
+			token_t *member = token_at(0);
+			if (member->kind != TK_IDENTIFIER) {
+				eprintf(op->filepath, op->source, op->start, member->end,
+					"Expected member identifier");
+				exit(1);
+			}
+			token_skip(1); // skip identifier
+
+			left = malloc_ast_member_access_expr(left, op, member);
 			break;
 		}
 
