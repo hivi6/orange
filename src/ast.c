@@ -15,6 +15,7 @@ static token_t *token_at(int index);
 static void token_skip(int inc);
 static void print_ast_helper(ast_t *ast, char *depth, int index);
 static void print_token(token_t *token);
+static void append_ast(int *argc, ast_t ***argv, ast_t *arg);
 
 static ast_t *malloc_ast(int kind, const char *filepath, const char *source,
 	pos_t start, pos_t end);
@@ -28,6 +29,7 @@ static ast_t *malloc_ast_postfix_expr(ast_t *left, token_t *op);
 static ast_t *malloc_ast_array_access_expr(ast_t *left, token_t *lbracket, ast_t *index, 
 	token_t *rbracket);
 static ast_t *malloc_ast_member_access_expr(ast_t *left, token_t *op, token_t *member);
+static ast_t *malloc_ast_function_call_expr(ast_t *left);
 
 static ast_t *expr();
 static ast_t *assign_expr();
@@ -184,11 +186,28 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 	case AST_MEMBER_ACCESS_EXPR: {
 		printf("+- AST_MEMBER_ACCESS_EXPR(");
 		print_token(ast->ast.member_access_expr.op);
+		printf(", ");
 		print_token(ast->ast.member_access_expr.member);
 		printf(")\n");
 
 		depth[index+1] = 0;
 		print_ast_helper(ast->ast.member_access_expr.left, depth, index+1);
+		break;
+	}
+
+	case AST_FUNCTION_CALL_EXPR: {
+		printf("+- AST_FUNCTION_CALL_EXPR(ARGUMENTS: %d)\n",
+			ast->ast.function_call_expr.argc);
+
+		if (ast->ast.function_call_expr.argc == 0) depth[index+1] = 0;
+		print_ast_helper(ast->ast.function_call_expr.left, depth, index+1);
+
+		for (int i = 0; i < ast->ast.function_call_expr.argc; i++) {
+			if (i == ast->ast.function_call_expr.argc-1) {
+				depth[index+1] = 0;
+			}
+			print_ast_helper(ast->ast.function_call_expr.argv[i], depth, index+1);
+		}
 		break;
 	}
 
@@ -207,6 +226,12 @@ static void print_token(token_t *token) {
 		printf("%c", token->source[i]);
 	}
 	printf("'");
+}
+
+static void append_ast(int *argc, ast_t ***argv, ast_t *arg) {
+	(*argc)++;
+	*argv = realloc(*argv, sizeof(ast_t *) * (*argc));
+	(*argv)[*argc - 1] = arg;
 }
 
 static ast_t *malloc_ast(int kind, const char *filepath, const char *source,
@@ -290,6 +315,15 @@ static ast_t *malloc_ast_member_access_expr(ast_t *left, token_t *op, token_t *m
 	ast->ast.member_access_expr.left = left;
 	ast->ast.member_access_expr.op = op;
 	ast->ast.member_access_expr.member = member;
+	return ast;
+}
+
+static ast_t *malloc_ast_function_call_expr(ast_t *left) {
+	ast_t *ast = malloc_ast(AST_FUNCTION_CALL_EXPR, left->filepath, left->source,
+		left->start, left->end);
+	ast->ast.function_call_expr.left = left;
+	ast->ast.function_call_expr.argc = 0;
+	ast->ast.function_call_expr.argv = NULL;
 	return ast;
 }
 
@@ -530,6 +564,32 @@ static ast_t *postfix_expr() {
 			token_skip(1); // skip identifier
 
 			left = malloc_ast_member_access_expr(left, op, member);
+			break;
+		}
+
+		case TK_LPAREN: {
+			token_skip(1); // skip (
+			left = malloc_ast_function_call_expr(left);
+
+			while (token_at(0)->kind != TK_EOF && token_at(0)->kind != TK_RPAREN) {
+				printf("Here2");
+				ast_t *arg = expr();
+				append_ast(&(left->ast.function_call_expr.argc), 
+					&(left->ast.function_call_expr.argv), arg);
+				if (token_at(0)->kind == TK_COMMA) {
+					token_skip(1); // skip ,
+				}
+			}
+
+			token_t *token = token_at(0);
+			if (token_at(0)->kind != TK_RPAREN) {
+				eprintf(token->filepath, token->source, token->start, token->end,
+					"Expected ')' at the end of function call");
+				exit(1);
+			}
+			token_skip(1); // skip )
+			
+			left->end = token->end;
 			break;
 		}
 
