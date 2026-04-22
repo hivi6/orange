@@ -22,6 +22,7 @@ enum {
 	AST_RETURN_STMT,
 	AST_CONTINUE_STMT,
 	AST_BREAK_STMT,
+	AST_DEFER_STMT,
 };
 
 struct ast_t {
@@ -103,6 +104,11 @@ struct ast_t {
 		struct {
 			struct ast_t *expr;
 		} return_stmt;
+
+		// AST_DEFER_STMT
+		struct {
+			struct ast_t *expr;
+		} defer_stmt;
 	} ast;
 };
 

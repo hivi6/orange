@@ -34,8 +34,10 @@ static ast_t *malloc_ast_expr_stmt(ast_t *expr, token_t *semicolon);
 static ast_t *malloc_ast_return_stmt(token_t *return_keyword, ast_t *expr, token_t *semicolon);
 static ast_t *malloc_ast_continue_stmt(token_t *continue_keyword, token_t *semicolon);
 static ast_t *malloc_ast_break_stmt(token_t *break_keyword, token_t *semicolon);
+static ast_t *malloc_ast_defer_stmt(token_t *defer_keyword, ast_t *expr, token_t *semicolon);
 
 static ast_t *stmt();
+static ast_t *defer_stmt();
 static ast_t *break_stmt();
 static ast_t *continue_stmt();
 static ast_t *return_stmt();
@@ -249,6 +251,14 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_DEFER_STMT: {
+		printf("+- AST_DEFER_STMT\n");
+
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.defer_stmt.expr, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -391,11 +401,36 @@ static ast_t *malloc_ast_break_stmt(token_t *break_keyword, token_t *semicolon) 
 	return ast;
 }
 
+static ast_t *malloc_ast_defer_stmt(token_t *defer_keyword, ast_t *expr, token_t *semicolon) {
+	ast_t *ast = malloc_ast(AST_DEFER_STMT, defer_keyword->filepath, defer_keyword->source,
+		defer_keyword->start, semicolon->end);
+	ast->ast.defer_stmt.expr = expr;
+	return ast;
+}
+
 static ast_t *stmt() {
+	if (token_at(0)->kind == TK_DEFER_KEYWORD) return defer_stmt();
 	if (token_at(0)->kind == TK_BREAK_KEYWORD) return break_stmt();
 	if (token_at(0)->kind == TK_CONTINUE_KEYWORD) return continue_stmt();
 	if (token_at(0)->kind == TK_RETURN_KEYWORD) return return_stmt();
 	return expr_stmt();
+}
+
+static ast_t *defer_stmt() {
+	token_t *defer_keyword = token_at(0);
+	token_skip(1); // skip defer keyword
+
+	ast_t *defer_expr = expr();
+
+	token_t *semicolon = token_at(0);
+	if (semicolon->kind != TK_SEMICOLON) {
+		eprintf(semicolon->filepath, semicolon->source, defer_keyword->start, semicolon->end,
+			"Expected ';' at the end of defer stmt");
+		exit(1);
+	}
+	token_skip(1); // skip ;
+
+	return malloc_ast_defer_stmt(defer_keyword, defer_expr, semicolon);
 }
 
 static ast_t *break_stmt() {
