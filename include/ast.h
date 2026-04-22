@@ -17,6 +17,8 @@ enum {
 	AST_ARRAY_ACCESS_EXPR,
 	AST_MEMBER_ACCESS_EXPR,
 	AST_FUNCTION_CALL_EXPR,
+
+	AST_EXPR_STMT,
 };
 
 struct ast_t {
@@ -88,6 +90,11 @@ struct ast_t {
 			int argc;
 			struct ast_t **argv;
 		} function_call_expr;
+
+		// AST_EXPR_STMT
+		struct {
+			struct ast_t *expr;
+		} expr_stmt;
 	} ast;
 };
 

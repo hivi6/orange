@@ -30,6 +30,10 @@ static ast_t *malloc_ast_array_access_expr(ast_t *left, token_t *lbracket, ast_t
 	token_t *rbracket);
 static ast_t *malloc_ast_member_access_expr(ast_t *left, token_t *op, token_t *member);
 static ast_t *malloc_ast_function_call_expr(ast_t *left);
+static ast_t *malloc_ast_expr_stmt(ast_t *expr, token_t *semicolon);
+
+static ast_t *stmt();
+static ast_t *expr_stmt();
 
 static ast_t *expr();
 static ast_t *assign_expr();
@@ -54,7 +58,7 @@ static ast_t *primary_expr();
 
 ast_t *parse(token_t *tokens) {
 	init(tokens);
-	ast_t *ast = expr();
+	ast_t *ast = stmt();
 	if (token_at(0)->kind != TK_EOF) {
 		token_t *token = token_at(0);
 		eprintf(token->filepath, token->source, token->start, token->end,
@@ -211,6 +215,14 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_EXPR_STMT: {
+		printf("+- AST_EXPR_STMT\n");
+		
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.expr_stmt.expr, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -325,6 +337,31 @@ static ast_t *malloc_ast_function_call_expr(ast_t *left) {
 	ast->ast.function_call_expr.argc = 0;
 	ast->ast.function_call_expr.argv = NULL;
 	return ast;
+}
+
+static ast_t *malloc_ast_expr_stmt(ast_t *expr, token_t *semicolon) {
+	ast_t *ast = malloc_ast(AST_EXPR_STMT, expr->filepath, expr->source,
+		expr->start, semicolon->end);
+	ast->ast.expr_stmt.expr = expr;
+	return ast;
+}
+
+static ast_t *stmt() {
+	return expr_stmt();
+}
+
+static ast_t *expr_stmt() {
+	ast_t *ast = expr();
+	
+	token_t *semicolon = token_at(0);
+	if (semicolon->kind != TK_SEMICOLON) {
+		eprintf(semicolon->filepath, semicolon->source, ast->start, semicolon->end,
+			"Expected ';' at the end of expression");
+		exit(1);
+	}
+	token_skip(1); // skip ;
+
+	return malloc_ast_expr_stmt(ast, semicolon);
 }
 
 static ast_t *expr() {
