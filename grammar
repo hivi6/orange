@@ -17,7 +17,7 @@ GRAMMAR
 <block-stmt>    := LBRACE <stmt>* RBRACE
 <var-stmt>      := <var-decl>
 <if-stmt>       := IF_KEYWORD LPAREN <expr> RPAREN <stmt> (ELSE_KEYWORD <stmt>)?
-<while-stmt>    := WHILE_KEYWORD <stmt>
+<while-stmt>    := WHILE_KEYWORD LPAREN <expr> RPAREN <stmt>
 <defer-stmt>    := DEFER_KEYWORD <expr> SEMICOLON
 <break-stmt>    := BREAK_KEYWORD SEMICOLON
 <continue-stmt> := CONTINUE_KEYWORD SEMICOLON

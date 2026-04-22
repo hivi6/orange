@@ -35,8 +35,10 @@ static ast_t *malloc_ast_return_stmt(token_t *return_keyword, ast_t *expr, token
 static ast_t *malloc_ast_continue_stmt(token_t *continue_keyword, token_t *semicolon);
 static ast_t *malloc_ast_break_stmt(token_t *break_keyword, token_t *semicolon);
 static ast_t *malloc_ast_defer_stmt(token_t *defer_keyword, ast_t *expr, token_t *semicolon);
+static ast_t *malloc_ast_while_stmt(token_t *while_keyword, ast_t *expr, ast_t *stmt);
 
 static ast_t *stmt();
+static ast_t *while_stmt();
 static ast_t *defer_stmt();
 static ast_t *break_stmt();
 static ast_t *continue_stmt();
@@ -259,6 +261,15 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_WHILE_STMT: {
+		printf("+- AST_WHILE_STMT\n");
+
+		print_ast_helper(ast->ast.while_stmt.expr, depth, index+1);
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.while_stmt.stmt, depth, index+1);
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -408,12 +419,48 @@ static ast_t *malloc_ast_defer_stmt(token_t *defer_keyword, ast_t *expr, token_t
 	return ast;
 }
 
+static ast_t *malloc_ast_while_stmt(token_t *while_keyword, ast_t *expr, ast_t *stmt) {
+	ast_t *ast = malloc_ast(AST_WHILE_STMT, while_keyword->filepath, while_keyword->source,
+		while_keyword->start, stmt->end);
+	ast->ast.while_stmt.expr = expr;
+	ast->ast.while_stmt.stmt = stmt;
+	return ast;
+}
+
 static ast_t *stmt() {
+	if (token_at(0)->kind == TK_WHILE_KEYWORD) return while_stmt();
 	if (token_at(0)->kind == TK_DEFER_KEYWORD) return defer_stmt();
 	if (token_at(0)->kind == TK_BREAK_KEYWORD) return break_stmt();
 	if (token_at(0)->kind == TK_CONTINUE_KEYWORD) return continue_stmt();
 	if (token_at(0)->kind == TK_RETURN_KEYWORD) return return_stmt();
 	return expr_stmt();
+}
+
+static ast_t *while_stmt() {
+	token_t *while_keyword = token_at(0);
+	token_skip(1); // skip while keyword
+
+	if (token_at(0)->kind != TK_LPAREN) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, while_keyword->start, token->end,
+			"Expected '(' after while keyword");
+		exit(1);
+	}
+	token_skip(1); // skip (
+
+	ast_t *while_expr = expr();
+
+	if (token_at(0)->kind != TK_RPAREN) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, while_keyword->start, token->end,
+			"Expected ')' after while expr");
+		exit(1);
+	}
+	token_skip(1); // skip )
+
+	ast_t *while_stmt = stmt();
+
+	return malloc_ast_while_stmt(while_keyword, while_expr, while_stmt);
 }
 
 static ast_t *defer_stmt() {
