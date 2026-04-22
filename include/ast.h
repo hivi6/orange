@@ -19,6 +19,7 @@ enum {
 	AST_FUNCTION_CALL_EXPR,
 
 	AST_EXPR_STMT,
+	AST_RETURN_STMT,
 };
 
 struct ast_t {
@@ -95,6 +96,11 @@ struct ast_t {
 		struct {
 			struct ast_t *expr;
 		} expr_stmt;
+
+		// AST_RETURN_STMT
+		struct {
+			struct ast_t *expr;
+		} return_stmt;
 	} ast;
 };
 

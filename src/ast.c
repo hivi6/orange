@@ -31,8 +31,10 @@ static ast_t *malloc_ast_array_access_expr(ast_t *left, token_t *lbracket, ast_t
 static ast_t *malloc_ast_member_access_expr(ast_t *left, token_t *op, token_t *member);
 static ast_t *malloc_ast_function_call_expr(ast_t *left);
 static ast_t *malloc_ast_expr_stmt(ast_t *expr, token_t *semicolon);
+static ast_t *malloc_ast_return_stmt(token_t *return_keyword, ast_t *expr, token_t *semicolon);
 
 static ast_t *stmt();
+static ast_t *return_stmt();
 static ast_t *expr_stmt();
 
 static ast_t *expr();
@@ -223,6 +225,16 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_RETURN_STMT: {
+		printf("+- AST_RETURN_STMT\n");
+
+		depth[index+1] = 0;
+		if (ast->ast.return_stmt.expr) {
+			print_ast_helper(ast->ast.return_stmt.expr, depth, index+1);
+		}
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -346,8 +358,36 @@ static ast_t *malloc_ast_expr_stmt(ast_t *expr, token_t *semicolon) {
 	return ast;
 }
 
+static ast_t *malloc_ast_return_stmt(token_t *return_keyword, ast_t *expr, token_t *semicolon) {
+	ast_t *ast = malloc_ast(AST_RETURN_STMT, return_keyword->filepath, return_keyword->source,
+		return_keyword->start, semicolon->end);
+	ast->ast.return_stmt.expr = expr;
+	return ast;
+}
+
 static ast_t *stmt() {
+	if (token_at(0)->kind == TK_RETURN_KEYWORD) return return_stmt();
 	return expr_stmt();
+}
+
+static ast_t *return_stmt() {
+	token_t *return_keyword = token_at(0);
+	token_skip(1); // skip return keyword
+
+	ast_t *return_expr = NULL;
+	if (token_at(0)->kind != TK_SEMICOLON) {
+		return_expr = expr();
+	}
+
+	token_t *semicolon = token_at(0);
+	if (semicolon->kind != TK_SEMICOLON) {
+		eprintf(semicolon->filepath, semicolon->source, return_keyword->start, semicolon->end,
+			"Expected ';' at the end of return stmt");
+		exit(1);
+	}
+	token_skip(1); // skip ;
+
+	return malloc_ast_return_stmt(return_keyword, return_expr, semicolon);
 }
 
 static ast_t *expr_stmt() {
@@ -356,7 +396,7 @@ static ast_t *expr_stmt() {
 	token_t *semicolon = token_at(0);
 	if (semicolon->kind != TK_SEMICOLON) {
 		eprintf(semicolon->filepath, semicolon->source, ast->start, semicolon->end,
-			"Expected ';' at the end of expression");
+			"Expected ';' at the end of expr stmt");
 		exit(1);
 	}
 	token_skip(1); // skip ;
