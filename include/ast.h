@@ -25,6 +25,7 @@ enum {
 	AST_DEFER_STMT,
 	AST_WHILE_STMT,
 	AST_IF_STMT,
+	AST_BLOCK_STMT,
 };
 
 struct ast_t {
@@ -124,6 +125,12 @@ struct ast_t {
 			struct ast_t *true_stmt;
 			struct ast_t *false_stmt;
 		} if_stmt;
+
+		// AST_BLOCK_STMT
+		struct {
+			int argc;
+			struct ast_t **argv; // statement array
+		} block_stmt;
 	} ast;
 };
 

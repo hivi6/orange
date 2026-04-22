@@ -37,8 +37,10 @@ static ast_t *malloc_ast_break_stmt(token_t *break_keyword, token_t *semicolon);
 static ast_t *malloc_ast_defer_stmt(token_t *defer_keyword, ast_t *expr, token_t *semicolon);
 static ast_t *malloc_ast_while_stmt(token_t *while_keyword, ast_t *expr, ast_t *stmt);
 static ast_t *malloc_ast_if_stmt(token_t *if_keyword, ast_t *expr, ast_t *true_stmt, ast_t *false_stmt);
+static ast_t *malloc_ast_block_stmt(token_t *lbrace);
 
 static ast_t *stmt();
+static ast_t *block_stmt();
 static ast_t *if_stmt();
 static ast_t *while_stmt();
 static ast_t *defer_stmt();
@@ -285,6 +287,18 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_BLOCK_STMT: {
+		printf("+- AST_BLOCK_STMT\n");
+
+		for (int i = 0; i < ast->ast.block_stmt.argc; i++) {
+			if (i == ast->ast.block_stmt.argc-1) {
+				depth[index+1] = 0;
+			}
+			print_ast_helper(ast->ast.block_stmt.argv[i], depth, index+1);
+		}
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -454,7 +468,14 @@ static ast_t *malloc_ast_if_stmt(token_t *if_keyword, ast_t *expr, ast_t *true_s
 	return ast;
 }
 
+static ast_t *malloc_ast_block_stmt(token_t *lbrace) {
+	ast_t *ast = malloc_ast(AST_BLOCK_STMT, lbrace->filepath, lbrace->source,
+		lbrace->start, lbrace->end);
+	return ast;
+}
+
 static ast_t *stmt() {
+	if (token_at(0)->kind == TK_LBRACE) return block_stmt();
 	if (token_at(0)->kind == TK_IF_KEYWORD) return if_stmt();
 	if (token_at(0)->kind == TK_WHILE_KEYWORD) return while_stmt();
 	if (token_at(0)->kind == TK_DEFER_KEYWORD) return defer_stmt();
@@ -462,6 +483,30 @@ static ast_t *stmt() {
 	if (token_at(0)->kind == TK_CONTINUE_KEYWORD) return continue_stmt();
 	if (token_at(0)->kind == TK_RETURN_KEYWORD) return return_stmt();
 	return expr_stmt();
+}
+
+static ast_t *block_stmt() {
+	token_t *lbrace = token_at(0);
+	token_skip(1); // skip {
+
+	ast_t *res = malloc_ast_block_stmt(lbrace);
+
+	while (token_at(0)->kind != TK_EOF && token_at(0)->kind != TK_RBRACE) {
+		ast_t *ast = stmt();
+		append_ast(&(res->ast.block_stmt.argc), &(res->ast.block_stmt.argv), ast);
+	}
+
+	if (token_at(0)->kind != TK_RBRACE) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, res->start, token->end,
+			"Expected '}' at the end of block stmt");
+		exit(1);
+	}
+	token_t *rbrace = token_at(0);
+	token_skip(1);
+	res->end = rbrace->end;
+
+	return res;
 }
 
 static ast_t *if_stmt() {
