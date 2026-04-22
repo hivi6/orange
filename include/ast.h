@@ -21,6 +21,7 @@ enum {
 	AST_EXPR_STMT,
 	AST_RETURN_STMT,
 	AST_CONTINUE_STMT,
+	AST_BREAK_STMT,
 };
 
 struct ast_t {

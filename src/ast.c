@@ -33,8 +33,10 @@ static ast_t *malloc_ast_function_call_expr(ast_t *left);
 static ast_t *malloc_ast_expr_stmt(ast_t *expr, token_t *semicolon);
 static ast_t *malloc_ast_return_stmt(token_t *return_keyword, ast_t *expr, token_t *semicolon);
 static ast_t *malloc_ast_continue_stmt(token_t *continue_keyword, token_t *semicolon);
+static ast_t *malloc_ast_break_stmt(token_t *break_keyword, token_t *semicolon);
 
 static ast_t *stmt();
+static ast_t *break_stmt();
 static ast_t *continue_stmt();
 static ast_t *return_stmt();
 static ast_t *expr_stmt();
@@ -242,6 +244,11 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_BREAK_STMT: {
+		printf("+- AST_BREAK_STMT\n");
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -378,10 +385,32 @@ static ast_t *malloc_ast_continue_stmt(token_t *continue_keyword, token_t *semic
 	return ast;
 }
 
+static ast_t *malloc_ast_break_stmt(token_t *break_keyword, token_t *semicolon) {
+	ast_t *ast = malloc_ast(AST_BREAK_STMT, break_keyword->filepath, break_keyword->source,
+		break_keyword->start, semicolon->end);
+	return ast;
+}
+
 static ast_t *stmt() {
+	if (token_at(0)->kind == TK_BREAK_KEYWORD) return break_stmt();
 	if (token_at(0)->kind == TK_CONTINUE_KEYWORD) return continue_stmt();
 	if (token_at(0)->kind == TK_RETURN_KEYWORD) return return_stmt();
 	return expr_stmt();
+}
+
+static ast_t *break_stmt() {
+	token_t *break_keyword = token_at(0);
+	token_skip(1); // skip break keyword
+
+	token_t *semicolon = token_at(0);
+	if (semicolon->kind != TK_SEMICOLON) {
+		eprintf(semicolon->filepath, semicolon->source, break_keyword->start, semicolon->end,
+			"Expected ';' at the end of break stmt");
+		exit(1);
+	}
+	token_skip(1); // skip ;
+
+	return malloc_ast_break_stmt(break_keyword, semicolon);
 }
 
 static ast_t *continue_stmt() {
