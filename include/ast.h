@@ -24,6 +24,7 @@ enum {
 	AST_BREAK_STMT,
 	AST_DEFER_STMT,
 	AST_WHILE_STMT,
+	AST_IF_STMT,
 };
 
 struct ast_t {
@@ -116,6 +117,13 @@ struct ast_t {
 			struct ast_t *expr;
 			struct ast_t *stmt;
 		} while_stmt;
+
+		// AST_IF_STMT
+		struct {
+			struct ast_t *expr;
+			struct ast_t *true_stmt;
+			struct ast_t *false_stmt;
+		} if_stmt;
 	} ast;
 };
 

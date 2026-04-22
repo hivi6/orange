@@ -36,8 +36,10 @@ static ast_t *malloc_ast_continue_stmt(token_t *continue_keyword, token_t *semic
 static ast_t *malloc_ast_break_stmt(token_t *break_keyword, token_t *semicolon);
 static ast_t *malloc_ast_defer_stmt(token_t *defer_keyword, ast_t *expr, token_t *semicolon);
 static ast_t *malloc_ast_while_stmt(token_t *while_keyword, ast_t *expr, ast_t *stmt);
+static ast_t *malloc_ast_if_stmt(token_t *if_keyword, ast_t *expr, ast_t *true_stmt, ast_t *false_stmt);
 
 static ast_t *stmt();
+static ast_t *if_stmt();
 static ast_t *while_stmt();
 static ast_t *defer_stmt();
 static ast_t *break_stmt();
@@ -270,6 +272,19 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_IF_STMT: {
+		printf("+- AST_IF_STMT\n");
+
+		print_ast_helper(ast->ast.if_stmt.expr, depth, index+1);
+		if (ast->ast.if_stmt.false_stmt == NULL) depth[index+1] = 0;
+		print_ast_helper(ast->ast.if_stmt.true_stmt, depth, index+1);
+		depth[index+1] = 0;
+		if (ast->ast.if_stmt.false_stmt) {
+			print_ast_helper(ast->ast.if_stmt.false_stmt, depth, index+1);
+		}
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -427,13 +442,59 @@ static ast_t *malloc_ast_while_stmt(token_t *while_keyword, ast_t *expr, ast_t *
 	return ast;
 }
 
+static ast_t *malloc_ast_if_stmt(token_t *if_keyword, ast_t *expr, ast_t *true_stmt, ast_t *false_stmt) {
+	pos_t end = true_stmt->end;
+	if (false_stmt) end = false_stmt->end;
+
+	ast_t *ast = malloc_ast(AST_IF_STMT, if_keyword->filepath, if_keyword->source,
+		if_keyword->start, end);
+	ast->ast.if_stmt.expr = expr;
+	ast->ast.if_stmt.true_stmt = true_stmt;
+	ast->ast.if_stmt.false_stmt = false_stmt;
+	return ast;
+}
+
 static ast_t *stmt() {
+	if (token_at(0)->kind == TK_IF_KEYWORD) return if_stmt();
 	if (token_at(0)->kind == TK_WHILE_KEYWORD) return while_stmt();
 	if (token_at(0)->kind == TK_DEFER_KEYWORD) return defer_stmt();
 	if (token_at(0)->kind == TK_BREAK_KEYWORD) return break_stmt();
 	if (token_at(0)->kind == TK_CONTINUE_KEYWORD) return continue_stmt();
 	if (token_at(0)->kind == TK_RETURN_KEYWORD) return return_stmt();
 	return expr_stmt();
+}
+
+static ast_t *if_stmt() {
+	token_t *if_keyword = token_at(0);
+	token_skip(1); // skip if keyword
+
+	if (token_at(0)->kind != TK_LPAREN) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, if_keyword->start, token->end,
+			"Expected '(' after if keyword");
+		exit(1);
+	}
+	token_skip(1); // skip (
+
+	ast_t *if_expr = expr();
+
+	if (token_at(0)->kind != TK_RPAREN) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, if_keyword->start, token->end,
+			"Expected ')' after if expr");
+		exit(1);
+	}
+	token_skip(1); // skip )
+
+	ast_t *true_stmt = stmt();
+	ast_t *false_stmt = NULL;
+
+	if (token_at(0)->kind == TK_ELSE_KEYWORD) {
+		token_skip(1); // skip else keyword
+		false_stmt = stmt();
+	}
+
+	return malloc_ast_if_stmt(if_keyword, if_expr, true_stmt, false_stmt);
 }
 
 static ast_t *while_stmt() {
