@@ -6,7 +6,7 @@ GRAMMAR
 
 <decl>           := <var-decl> | <fn-decl> | <struct-decl>
 <var-decl>       := VAR_KEYWORD IDENTIFIER (COLON <type-specifier>)? (EQUAL <expr>)? SEMICOLON
-<fn-decl>        := FN_KEYWORD IDENTIFIER LPAREN <fn-params>? RPAREN <type-specifier>? LBRACE <stmt>* RBRACE
+<fn-decl>        := FN_KEYWORD IDENTIFIER LPAREN <fn-params>? RPAREN (COLON <type-specifier>)? LBRACE <stmt>* RBRACE
 <struct-decl>    := STRUCT_KEYWORD LBRACE <struct-fields>? RBRACE
 <type-specifier> := STAR* IDENTIFIER (LBRACKET INT_LITERAL RBRACKET)*
 <fn-params>      := IDENTIFIER COLON <type-specifier> (COMMA IDENTIFIER COLON <type-specifier>)*

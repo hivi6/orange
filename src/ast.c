@@ -42,9 +42,11 @@ static ast_t *malloc_ast_type_specifier(token_t *type_name);
 static ast_t *malloc_ast_var_stmt(token_t *var_keyword, token_t *identifier, ast_t *type, 
 	ast_t *expr, token_t *semicolon);
 static ast_t *malloc_ast_struct_decl(token_t *struct_keyword, token_t *struct_name);
+static ast_t *malloc_ast_function_decl(token_t *function_keyword, token_t *function_name);
 
 static ast_t *decl();
 static ast_t *struct_decl();
+static ast_t *function_decl();
 
 static ast_t *type_specifier();
 
@@ -332,12 +334,30 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 	}
 
 	case AST_STRUCT_DECL: {
-		printf("+- AST_STRUCT_DECL\n");
+		printf("+- AST_STRUCT_DECL(");
+		print_token(ast->ast.struct_decl.identifier);
+		printf(")\n");
 
 		for (int i = 0; i < ast->ast.struct_decl.fields_cnt; i++) {
 			print_ast_helper(ast->ast.struct_decl.fields[i], depth, index+1);
 			print_ast_helper(ast->ast.struct_decl.types[i], depth, index+1);
 		}
+
+		break;
+	}
+
+	case AST_FUNCTION_DECL: {
+		printf("+- AST_FUNCTION_DECL(");
+		print_token(ast->ast.function_decl.identifier);
+		printf(")\n");
+
+		for (int i = 0; i < ast->ast.function_decl.params_cnt; i++) {
+			print_ast_helper(ast->ast.function_decl.params[i], depth, index+1);
+			print_ast_helper(ast->ast.function_decl.types[i], depth, index+1);
+		}
+
+		depth[index+1] = 0;
+		print_ast_helper(ast->ast.function_decl.body, depth, index+1);
 
 		break;
 	}
@@ -541,8 +561,16 @@ static ast_t *malloc_ast_struct_decl(token_t *struct_keyword, token_t *struct_na
 	return ast;
 }
 
+static ast_t *malloc_ast_function_decl(token_t *function_keyword, token_t *function_name) {
+	ast_t *ast = malloc_ast(AST_FUNCTION_DECL, function_keyword->filepath, function_keyword->source,
+		function_keyword->start, function_name->end);
+	ast->ast.function_decl.identifier = function_name;
+	return ast;
+}
+
 static ast_t *decl() {
 	if (token_at(0)->kind == TK_STRUCT_KEYWORD) return struct_decl();
+	if (token_at(0)->kind == TK_FN_KEYWORD) return function_decl();
 	
 	token_t *token = token_at(0);
 	eprintf(token->filepath, token->source, token->start, token->end,
@@ -612,6 +640,77 @@ static ast_t *struct_decl() {
 	token_skip(1);
 
 	ast->end = rbrace->end;
+	return ast;
+}
+
+static ast_t *function_decl() {
+	token_t *function_keyword = token_at(0);
+	token_skip(1); // skip function keyword
+
+	token_t *function_name = token_at(0);
+	if (function_name->kind != TK_IDENTIFIER) {
+		eprintf(function_name->filepath, function_name->source, function_keyword->start, function_name->end,
+			"Expected function name after fn keyword");
+		exit(1);
+	}
+	token_skip(1); // skip identifier
+
+	ast_t *ast = malloc_ast_function_decl(function_keyword, function_name);
+
+	if (token_at(0)->kind != TK_LPAREN) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, function_keyword->start, token->end,
+			"Expected '(' after function name");
+		exit(1);
+	}
+	token_skip(1); // skip (
+
+	while (token_at(0)->kind != TK_RPAREN) {
+		ast_t *param = primary_expr();
+		if (param->kind != AST_VAR_EXPR || param->ast.var_expr.token->kind != TK_IDENTIFIER) {
+			eprintf(param->filepath, param->source, param->start, param->end,
+				"Expected function parameter");
+			exit(1);
+		}
+
+		if (token_at(0)->kind != TK_COLON) {
+			token_t *token = token_at(0);
+			eprintf(token->filepath, token->source, param->start, token->end,
+				"Expected ':' after parameter name");
+			exit(1);
+		}
+		token_skip(1);
+
+		ast_t *type = type_specifier();
+		append_ast(&(ast->ast.function_decl.params_cnt), &(ast->ast.function_decl.params), param);
+		append_ast(&(ast->ast.function_decl.types_cnt), &(ast->ast.function_decl.types), type);
+		
+		if (token_at(0)->kind != TK_COMMA) {
+			break;
+		}
+
+		token_skip(1); // skip ,
+	}
+
+	token_t *rparen = token_at(0);
+	if (rparen->kind != TK_RPAREN) {
+		eprintf(rparen->filepath, rparen->source, rparen->start, rparen->end,
+			"Expected ')' after the end of parameters");
+		exit(1);
+	}
+	token_skip(1);
+
+	ast_t *type = NULL;
+	if (token_at(0)->kind == TK_COLON) {
+		token_skip(1);
+		type = type_specifier();
+	}
+
+	ast_t *body = block_stmt();
+	ast->ast.function_decl.return_type = type;
+	ast->ast.function_decl.body = body;
+	ast->end = body->end;
+
 	return ast;
 }
 

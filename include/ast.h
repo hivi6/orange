@@ -31,6 +31,7 @@ enum {
 	AST_TYPE_SPECIFIER,
 
 	AST_STRUCT_DECL,
+	AST_FUNCTION_DECL,
 };
 
 struct ast_t {
@@ -168,6 +169,26 @@ struct ast_t {
 			int types_cnt;
 			struct ast_t **types;
 		} struct_decl;
+
+		// AST_FUNCTION_DECL
+		struct {
+			// function name
+			token_t *identifier;
+
+			// function parameter names (but only AST_VAR_EXPR, only TK_IDENTIFIER)
+			int params_cnt;
+			struct ast_t **params;
+
+			// type of each function parameters (but only AST_TYPE_SPECIFIER)
+			int types_cnt;
+			struct ast_t **types;
+			
+			// function return type (but only AST_TYPE_SPECIFIER)
+			struct ast_t *return_type;
+
+			// function body (but only AST_BLOCK_STMT)
+			struct ast_t *body;
+		} function_decl;
 	} ast;
 };
 
