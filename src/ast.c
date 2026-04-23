@@ -41,6 +41,10 @@ static ast_t *malloc_ast_block_stmt(token_t *lbrace);
 static ast_t *malloc_ast_type_specifier(token_t *type_name);
 static ast_t *malloc_ast_var_stmt(token_t *var_keyword, token_t *identifier, ast_t *type, 
 	ast_t *expr, token_t *semicolon);
+static ast_t *malloc_ast_struct_decl(token_t *struct_keyword, token_t *struct_name);
+
+static ast_t *decl();
+static ast_t *struct_decl();
 
 static ast_t *type_specifier();
 
@@ -78,7 +82,7 @@ static ast_t *primary_expr();
 
 ast_t *parse(token_t *tokens) {
 	init(tokens);
-	ast_t *ast = stmt();
+	ast_t *ast = decl();
 	if (token_at(0)->kind != TK_EOF) {
 		token_t *token = token_at(0);
 		eprintf(token->filepath, token->source, token->start, token->end,
@@ -327,6 +331,17 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_STRUCT_DECL: {
+		printf("+- AST_STRUCT_DECL\n");
+
+		for (int i = 0; i < ast->ast.struct_decl.fields_cnt; i++) {
+			print_ast_helper(ast->ast.struct_decl.fields[i], depth, index+1);
+			print_ast_helper(ast->ast.struct_decl.types[i], depth, index+1);
+		}
+
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -519,6 +534,87 @@ static ast_t *malloc_ast_var_stmt(token_t *var_keyword, token_t *identifier, ast
 	return ast;
 }
 
+static ast_t *malloc_ast_struct_decl(token_t *struct_keyword, token_t *struct_name) {
+	ast_t *ast = malloc_ast(AST_STRUCT_DECL, struct_keyword->filepath, struct_keyword->source,
+		struct_keyword->start, struct_name->end);
+	ast->ast.struct_decl.identifier = struct_name;
+	return ast;
+}
+
+static ast_t *decl() {
+	if (token_at(0)->kind == TK_STRUCT_KEYWORD) return struct_decl();
+	
+	token_t *token = token_at(0);
+	eprintf(token->filepath, token->source, token->start, token->end,
+		"Unexpected token in decl");
+	exit(1);
+}
+
+static ast_t *struct_decl() {
+	token_t *struct_keyword = token_at(0);
+	token_skip(1); // skip struct keyword
+
+	token_t *identifier = token_at(0);
+	if (identifier->kind != TK_IDENTIFIER) {
+		eprintf(identifier->filepath, identifier->source, struct_keyword->start, identifier->end,
+			"Expected identifier after struct keyword");
+		exit(1);
+	}
+	token_skip(1); // skip struct identifier
+
+	token_t *lbrace = token_at(0);
+	if (lbrace->kind != TK_LBRACE) {
+		eprintf(lbrace->filepath, lbrace->source, struct_keyword->start, lbrace->end,
+			"Expected '{' after struct identifier");
+		exit(1);
+	}
+	token_skip(1); // skip {
+
+	ast_t *ast = malloc_ast_struct_decl(struct_keyword, identifier);
+
+	while (token_at(0)->kind != TK_RBRACE) {
+		ast_t *field = primary_expr();
+		if (field->kind != AST_VAR_EXPR || field->ast.var_expr.token->kind != TK_IDENTIFIER) {
+			eprintf(field->filepath, field->source, field->start, field->end,
+				"Expected identifier field in struct");
+			exit(1);
+		}
+
+		token_t *colon = token_at(0);
+		if (colon->kind != TK_COLON) {
+			eprintf(colon->filepath, colon->source, field->start, colon->end,
+				"Expected ':' after identifier field");
+			exit(1);
+		}
+		token_skip(1); // skip :
+
+		ast_t *type = type_specifier();
+
+		token_t *semicolon = token_at(0);
+		if (semicolon->kind != TK_SEMICOLON) {
+			eprintf(semicolon->filepath, semicolon->source, field->start, semicolon->end,
+				"Expected ';' at the end of field declaration");
+			exit(1);
+		}
+		token_skip(1); // skip ;
+
+		append_ast(&(ast->ast.struct_decl.fields_cnt), &(ast->ast.struct_decl.fields), field);
+		append_ast(&(ast->ast.struct_decl.types_cnt), &(ast->ast.struct_decl.types), type);
+	}
+
+	token_t *rbrace = token_at(0);
+	if (token_at(0)->kind != TK_RBRACE) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, struct_keyword->start, token->end,
+			"Expected '}' at the end of struct declaration");
+		exit(1);
+	}
+	token_skip(1);
+
+	ast->end = rbrace->end;
+	return ast;
+}
+
 static ast_t *type_specifier() {
 	int pointer_count = 0;
 
@@ -547,7 +643,8 @@ static ast_t *type_specifier() {
 		token_skip(1); // skip [
 
 		ast_t *array_size = primary_expr();
-		if (array_size->kind != AST_LITERAL_EXPR || array_size->ast.literal_expr.token->kind != TK_INT_LITERAL) {
+		if (array_size->kind != AST_LITERAL_EXPR || 
+			array_size->ast.literal_expr.token->kind != TK_INT_LITERAL) {
 			eprintf(array_size->filepath, array_size->source, array_size->start, array_size->end,
 				"Expected only int literal as array size");
 			exit(1);

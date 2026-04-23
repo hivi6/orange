@@ -29,6 +29,8 @@ enum {
 	AST_VAR_STMT,
 
 	AST_TYPE_SPECIFIER,
+
+	AST_STRUCT_DECL,
 };
 
 struct ast_t {
@@ -135,6 +137,13 @@ struct ast_t {
 			struct ast_t **argv; // statement array
 		} block_stmt;
 
+		// AST_VAR_STMT
+		struct {
+			token_t *identifier;
+			struct ast_t *type;
+			struct ast_t *expr;
+		} var_stmt;
+
 		// AST_TYPE_SPECIFIER
 		struct {
 			token_t *type_name;
@@ -146,12 +155,19 @@ struct ast_t {
 			struct ast_t **argv;
 		} type_specifier;
 
-		// AST_VAR_STMT
+		// AST_STRUCT_DECL
 		struct {
+			// struct name
 			token_t *identifier;
-			struct ast_t *type;
-			struct ast_t *expr;
-		} var_stmt;
+
+			// struct fields (but only AST_VAR_EXPR, and only TK_IDENTIFIER)
+			int fields_cnt;
+			struct ast_t **fields;
+
+			// type of each struct fields (but only AST_TYPE_SPECIFIER)
+			int types_cnt;
+			struct ast_t **types;
+		} struct_decl;
 	} ast;
 };
 
