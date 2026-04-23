@@ -148,7 +148,7 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 
 	case AST_VAR_EXPR: {
 		printf("+- AST_VAR_EXPR(");
-		print_token(ast->ast.literal_expr.token);
+		print_token(ast->ast.var_expr.token);
 		printf(")\n");
 		depth[index+1] = 0;
 		break;
