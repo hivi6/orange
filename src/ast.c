@@ -38,6 +38,9 @@ static ast_t *malloc_ast_defer_stmt(token_t *defer_keyword, ast_t *expr, token_t
 static ast_t *malloc_ast_while_stmt(token_t *while_keyword, ast_t *expr, ast_t *stmt);
 static ast_t *malloc_ast_if_stmt(token_t *if_keyword, ast_t *expr, ast_t *true_stmt, ast_t *false_stmt);
 static ast_t *malloc_ast_block_stmt(token_t *lbrace);
+static ast_t *malloc_ast_type_specifier(token_t *type_name);
+
+static ast_t *type_specifier();
 
 static ast_t *stmt();
 static ast_t *block_stmt();
@@ -299,6 +302,15 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_TYPE_SPECIFIER: {
+		printf("+- AST_TYPE_SPECIFIER(");
+		for (int i = ast->start.index; i < ast->end.index; i++) {
+			printf("%c", ast->source[i]);
+		}
+		printf(")\n");
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -474,7 +486,68 @@ static ast_t *malloc_ast_block_stmt(token_t *lbrace) {
 	return ast;
 }
 
+static ast_t *malloc_ast_type_specifier(token_t *type_name) {
+	ast_t *ast = malloc_ast(AST_TYPE_SPECIFIER, type_name->filepath, type_name->source,
+		type_name->start, type_name->end);
+	ast->ast.type_specifier.type_name = type_name;
+	return ast;
+}
+
+static ast_t *type_specifier() {
+	int pointer_count = 0;
+
+	pos_t start;
+	if (token_at(0)->kind == TK_STAR) start = token_at(0)->start;
+	while (token_at(0)->kind == TK_STAR) {
+		pointer_count++;
+		token_skip(1);
+	}
+
+	token_t *identifier = token_at(0);
+	if (identifier->kind != TK_IDENTIFIER) {
+		eprintf(identifier->filepath, identifier->source, identifier->start, identifier->end,
+			"Expected an identifier in type_specifier");
+		exit(1);
+	}
+	token_skip(1); // skip identifier;
+
+	ast_t *type_spec = malloc_ast_type_specifier(identifier);
+	if (pointer_count) {
+		type_spec->ast.type_specifier.pointer_cnt = pointer_count;
+		type_spec->start = start;
+	}
+
+	while (token_at(0)->kind == TK_LBRACKET) {
+		token_skip(1); // skip [
+
+		ast_t *array_size = primary_expr();
+		if (array_size->kind != AST_LITERAL_EXPR || array_size->ast.literal_expr.token->kind != TK_INT_LITERAL) {
+			eprintf(array_size->filepath, array_size->source, array_size->start, array_size->end,
+				"Expected only int literal as array size");
+			exit(1);
+		}
+
+		append_ast(&(type_spec->ast.type_specifier.argc), &(type_spec->ast.type_specifier.argv), array_size);
+		
+		token_t *rbracket = token_at(0);
+		if (rbracket->kind != TK_RBRACKET) {
+			eprintf(rbracket->filepath, rbracket->source, rbracket->start, rbracket->end,
+				"Expected ']' after array size");
+			exit(1);
+		}
+		token_skip(1);
+
+		type_spec->end = rbracket->end;
+	}
+
+	return type_spec;
+}
+
 static ast_t *stmt() {
+	if (token_at(0)->kind == TK_COLON) {
+		token_skip(1);
+		return type_specifier();
+	}
 	if (token_at(0)->kind == TK_LBRACE) return block_stmt();
 	if (token_at(0)->kind == TK_IF_KEYWORD) return if_stmt();
 	if (token_at(0)->kind == TK_WHILE_KEYWORD) return while_stmt();
@@ -895,7 +968,6 @@ static ast_t *postfix_expr() {
 			left = malloc_ast_function_call_expr(left);
 
 			while (token_at(0)->kind != TK_EOF && token_at(0)->kind != TK_RPAREN) {
-				printf("Here2");
 				ast_t *arg = expr();
 				append_ast(&(left->ast.function_call_expr.argc), 
 					&(left->ast.function_call_expr.argv), arg);

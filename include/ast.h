@@ -26,6 +26,8 @@ enum {
 	AST_WHILE_STMT,
 	AST_IF_STMT,
 	AST_BLOCK_STMT,
+
+	AST_TYPE_SPECIFIER,
 };
 
 struct ast_t {
@@ -131,6 +133,17 @@ struct ast_t {
 			int argc;
 			struct ast_t **argv; // statement array
 		} block_stmt;
+
+		// AST_TYPE_SPECIFIER
+		struct {
+			token_t *type_name;
+
+			int pointer_cnt;
+
+			// array sizes (but only AST_LITERAL_EXPR, and only TK_INT_LITERAL)
+			int argc;
+			struct ast_t **argv;
+		} type_specifier;
 	} ast;
 };
 
