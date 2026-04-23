@@ -26,6 +26,7 @@ enum {
 	AST_WHILE_STMT,
 	AST_IF_STMT,
 	AST_BLOCK_STMT,
+	AST_VAR_STMT,
 
 	AST_TYPE_SPECIFIER,
 };
@@ -144,6 +145,13 @@ struct ast_t {
 			int argc;
 			struct ast_t **argv;
 		} type_specifier;
+
+		// AST_VAR_STMT
+		struct {
+			token_t *identifier;
+			struct ast_t *type;
+			struct ast_t *expr;
+		} var_stmt;
 	} ast;
 };
 

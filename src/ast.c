@@ -39,10 +39,13 @@ static ast_t *malloc_ast_while_stmt(token_t *while_keyword, ast_t *expr, ast_t *
 static ast_t *malloc_ast_if_stmt(token_t *if_keyword, ast_t *expr, ast_t *true_stmt, ast_t *false_stmt);
 static ast_t *malloc_ast_block_stmt(token_t *lbrace);
 static ast_t *malloc_ast_type_specifier(token_t *type_name);
+static ast_t *malloc_ast_var_stmt(token_t *var_keyword, token_t *identifier, ast_t *type, 
+	ast_t *expr, token_t *semicolon);
 
 static ast_t *type_specifier();
 
 static ast_t *stmt();
+static ast_t *var_stmt();
 static ast_t *block_stmt();
 static ast_t *if_stmt();
 static ast_t *while_stmt();
@@ -302,6 +305,19 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_VAR_STMT: {
+		printf("+- AST_VAR_STMT(");
+		print_token(ast->ast.var_stmt.identifier);
+		printf(")\n");
+
+		if (ast->ast.var_stmt.type) print_ast_helper(ast->ast.var_stmt.type, depth, index+1);
+		if (ast->ast.var_stmt.expr) {
+			depth[index+1] = 0;
+			print_ast_helper(ast->ast.var_stmt.expr, depth, index+1);
+		}
+		break;
+	}
+
 	case AST_TYPE_SPECIFIER: {
 		printf("+- AST_TYPE_SPECIFIER(");
 		for (int i = ast->start.index; i < ast->end.index; i++) {
@@ -493,6 +509,16 @@ static ast_t *malloc_ast_type_specifier(token_t *type_name) {
 	return ast;
 }
 
+static ast_t *malloc_ast_var_stmt(token_t *var_keyword, token_t *identifier, ast_t *type, 
+	ast_t *expr, token_t *semicolon) {
+	ast_t *ast = malloc_ast(AST_VAR_STMT, var_keyword->filepath, var_keyword->source,
+		var_keyword->start, semicolon->end);
+	ast->ast.var_stmt.identifier = identifier;
+	ast->ast.var_stmt.type = type;
+	ast->ast.var_stmt.expr = expr;
+	return ast;
+}
+
 static ast_t *type_specifier() {
 	int pointer_count = 0;
 
@@ -544,10 +570,7 @@ static ast_t *type_specifier() {
 }
 
 static ast_t *stmt() {
-	if (token_at(0)->kind == TK_COLON) {
-		token_skip(1);
-		return type_specifier();
-	}
+	if (token_at(0)->kind == TK_VAR_KEYWORD) return var_stmt();
 	if (token_at(0)->kind == TK_LBRACE) return block_stmt();
 	if (token_at(0)->kind == TK_IF_KEYWORD) return if_stmt();
 	if (token_at(0)->kind == TK_WHILE_KEYWORD) return while_stmt();
@@ -556,6 +579,41 @@ static ast_t *stmt() {
 	if (token_at(0)->kind == TK_CONTINUE_KEYWORD) return continue_stmt();
 	if (token_at(0)->kind == TK_RETURN_KEYWORD) return return_stmt();
 	return expr_stmt();
+}
+
+static ast_t *var_stmt() {
+	token_t *var_keyword = token_at(0);
+	token_skip(1); // skip var keyword
+
+	token_t *identifier = token_at(0);
+	if (identifier->kind != TK_IDENTIFIER) {
+		eprintf(identifier->filepath, identifier->source, var_keyword->start, identifier->end,
+			"Expected identifier after var keyword");
+		exit(1);
+	}
+	token_skip(1); // skip identifier
+
+	ast_t *type = NULL;
+	if (token_at(0)->kind == TK_COLON) {
+		token_skip(1); // skip :
+		type = type_specifier();
+	}
+
+	ast_t *var_expr = NULL;
+	if (token_at(0)->kind == TK_EQUAL) {
+		token_skip(1); // skip =
+		var_expr = expr();
+	}
+
+	token_t *semicolon = token_at(0);
+	if (semicolon->kind != TK_SEMICOLON) {
+		eprintf(semicolon->filepath, semicolon->source, var_keyword->start, semicolon->end,
+			"Expected ';' at the end of var stmt");
+		exit(1);
+	}
+	token_skip(1);
+
+	return malloc_ast_var_stmt(var_keyword, identifier, type, var_expr, semicolon);
 }
 
 static ast_t *block_stmt() {
