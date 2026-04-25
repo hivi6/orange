@@ -47,6 +47,7 @@ static ast_t *malloc_ast_function_decl(token_t *function_keyword, token_t *funct
 static ast_t *decl();
 static ast_t *struct_decl();
 static ast_t *function_decl();
+static ast_t *var_decl();
 
 static ast_t *type_specifier();
 
@@ -362,6 +363,19 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_VAR_DECL: {
+		printf("+- AST_VAR_DECL(");
+		print_token(ast->ast.var_stmt.identifier);
+		printf(")\n");
+
+		if (ast->ast.var_stmt.type) print_ast_helper(ast->ast.var_stmt.type, depth, index+1);
+		if (ast->ast.var_stmt.expr) {
+			depth[index+1] = 0;
+			print_ast_helper(ast->ast.var_stmt.expr, depth, index+1);
+		}
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -571,6 +585,7 @@ static ast_t *malloc_ast_function_decl(token_t *function_keyword, token_t *funct
 static ast_t *decl() {
 	if (token_at(0)->kind == TK_STRUCT_KEYWORD) return struct_decl();
 	if (token_at(0)->kind == TK_FN_KEYWORD) return function_decl();
+	if (token_at(0)->kind == TK_VAR_KEYWORD) return var_decl();
 	
 	token_t *token = token_at(0);
 	eprintf(token->filepath, token->source, token->start, token->end,
@@ -711,6 +726,12 @@ static ast_t *function_decl() {
 	ast->ast.function_decl.body = body;
 	ast->end = body->end;
 
+	return ast;
+}
+
+static ast_t *var_decl() {
+	ast_t *ast = var_stmt();
+	ast->kind = AST_VAR_DECL;
 	return ast;
 }
 

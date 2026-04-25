@@ -32,6 +32,7 @@ enum {
 
 	AST_STRUCT_DECL,
 	AST_FUNCTION_DECL,
+	AST_VAR_DECL,
 };
 
 struct ast_t {
