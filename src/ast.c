@@ -43,6 +43,9 @@ static ast_t *malloc_ast_var_stmt(token_t *var_keyword, token_t *identifier, ast
 	ast_t *expr, token_t *semicolon);
 static ast_t *malloc_ast_struct_decl(token_t *struct_keyword, token_t *struct_name);
 static ast_t *malloc_ast_function_decl(token_t *function_keyword, token_t *function_name);
+static ast_t *malloc_ast_prog();
+
+static ast_t *prog();
 
 static ast_t *decl();
 static ast_t *struct_decl();
@@ -85,7 +88,7 @@ static ast_t *primary_expr();
 
 ast_t *parse(token_t *tokens) {
 	init(tokens);
-	ast_t *ast = decl();
+	ast_t *ast = prog();
 	if (token_at(0)->kind != TK_EOF) {
 		token_t *token = token_at(0);
 		eprintf(token->filepath, token->source, token->start, token->end,
@@ -376,6 +379,17 @@ static void print_ast_helper(ast_t *ast, char *depth, int index) {
 		break;
 	}
 
+	case AST_PROG: {
+		printf("+- AST_PROG\n");
+
+		for (int i = 0; i < ast->ast.prog.argc; i++) {
+			if (i == ast->ast.prog.argc-1) depth[index+1] = 0;
+			print_ast_helper(ast->ast.prog.argv[i], depth, index+1);
+		}
+
+		break;
+	}
+
 	default: {
 		printf("\n");
 		eprintf(ast->filepath, ast->source, ast->start, ast->end,
@@ -579,6 +593,33 @@ static ast_t *malloc_ast_function_decl(token_t *function_keyword, token_t *funct
 	ast_t *ast = malloc_ast(AST_FUNCTION_DECL, function_keyword->filepath, function_keyword->source,
 		function_keyword->start, function_name->end);
 	ast->ast.function_decl.identifier = function_name;
+	return ast;
+}
+
+static ast_t *malloc_ast_prog() {
+	ast_t *ast = malloc_ast(AST_PROG, NULL, NULL, POS_INIT, POS_INIT);
+	return ast;
+}
+
+static ast_t *prog() {
+	ast_t *ast = malloc_ast_prog();
+	ast->filepath = token_at(0)->filepath;
+	ast->source = token_at(0)->source;
+	ast->start = token_at(0)->start;
+
+	while (token_at(0)->kind != TK_EOF) {
+		ast_t *d = decl();
+		append_ast(&(ast->ast.prog.argc), &(ast->ast.prog.argv), d);
+	}
+	ast->end = token_at(0)->end;
+
+	if (ast->ast.prog.argc == 0) {
+		token_t *token = token_at(0);
+		eprintf(token->filepath, token->source, token->start, token->end,
+			"Expected some declaration but instead got EOF");
+		exit(1);
+	}
+
 	return ast;
 }
 

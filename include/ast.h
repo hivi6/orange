@@ -33,6 +33,8 @@ enum {
 	AST_STRUCT_DECL,
 	AST_FUNCTION_DECL,
 	AST_VAR_DECL,
+
+	AST_PROG,
 };
 
 struct ast_t {
@@ -190,6 +192,13 @@ struct ast_t {
 			// function body (but only AST_BLOCK_STMT)
 			struct ast_t *body;
 		} function_decl;
+
+		// AST_PROG
+		struct {
+			// Number of declarations
+			int argc;
+			struct ast_t **argv;
+		} prog;
 	} ast;
 };
 
