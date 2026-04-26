@@ -26,6 +26,7 @@ ABOUT:
 OPTION:
     -h, --help     This screen
     --only-tokens  Print only the tokens
+    --only-ast     Print only the ast
 
 HINTS:
     1. If you want to read from stdin, then make filepath == '-'
