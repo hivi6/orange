@@ -142,6 +142,12 @@ static type_t *get_field_type(ast_t *ast, ast_t *prog) {
 
 	char *type_lexical = token_lexical_str(ast->ast.type_specifier.type_name);
 	type_t *base_type = get_type(type_lexical);
+	if (base_type == NULL) {
+		token_t *token = ast->ast.type_specifier.type_name;
+		eprintf(token->filepath, token->source, token->start, token->end,
+			"No such type defined");
+		exit(1);
+	}
 
 	// Get how many pointers
 	for (int i = 0; i < ast->ast.type_specifier.pointer_cnt; i++) {
