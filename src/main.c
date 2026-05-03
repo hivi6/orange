@@ -1,6 +1,8 @@
 #include "common.h"
 #include "token.h"
 #include "ast.h"
+#include "analyze.h"
+#include "type.h"
 
 // ========================================
 // helper declarations
@@ -75,6 +77,13 @@ int main(int argc, const char **argv) {
 	if (only_ast_flag) {
 		print_ast(ast);
 		return 0;
+	}
+
+	analyze(ast);
+	printf("=== TYPE INFORMATION ===\n\n");
+	for (type_t *temp = all_types(); temp; temp = temp->next) {
+		print_type_info(temp, 0);
+		printf("\n===================\n\n");
 	}
 
 	return 0;

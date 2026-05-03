@@ -88,6 +88,14 @@ const char *token_kind_str(int kind) {
 	return "TK_UNKNOWN";
 }
 
+char *token_lexical_str(token_t *token) {
+	char *literal = malloc((token->end.index - token->start.index + 1) * sizeof(char));
+	int i = 0, j = token->start.index;
+	while (j < token->end.index) literal[i++] = token->source[j++];
+	literal[i] = 0;
+	return literal;
+}
+
 token_t *generate_tokens(const char *filepath) {
 	init(filepath);
 
@@ -98,6 +106,10 @@ token_t *generate_tokens(const char *filepath) {
 
 	return g_head;
 }
+
+// ========================================
+// helper definition
+// ========================================
 
 static void init(const char *filepath) {
 	g_filepath = filepath;

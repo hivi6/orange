@@ -85,6 +85,17 @@ typedef struct token_t token_t;
 const char *token_kind_str(int kind);
 
 /**
+ * Get the lexical string
+ *
+ * params:
+ *     token  the token whose lexical string needs to be created
+ *
+ * returns:
+ *     get the pointer to the created lexical string
+ */
+char *token_lexical_str(token_t *token);
+
+/**
  * Generate tokens from the given filepath
  *
  * params:
