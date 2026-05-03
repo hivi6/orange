@@ -88,9 +88,8 @@ type_t *all_types();
  *
  * params:
  *     type    type that needs printing
- *     indent  indentation before printing a string
  */
-void print_type_info(type_t *type, int indent);
+void print_type_info(type_t *type);
 
 #endif // TYPE_H
 

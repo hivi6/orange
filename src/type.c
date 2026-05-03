@@ -8,6 +8,8 @@
 static type_t *g_head;
 static type_t *g_tail;
 
+void print_type_info_helper(type_t *type, int indent, int print_struct_members);
+
 // ========================================
 // type.h - definition
 // ========================================
@@ -41,7 +43,15 @@ type_t *all_types() {
 	return g_head;
 }
 
-void print_type_info(type_t *type, int indent) {
+void print_type_info(type_t *type) {
+	print_type_info_helper(type, 0, 1);
+}
+
+// ========================================
+// helper definition
+// ========================================
+
+void print_type_info_helper(type_t *type, int indent, int print_struct_members) {
 	const char *kind_str[] = {"TYPE_PRIMITIVE", "TYPE_POINTER", "TYPE_ARRAY", 
 		"TYPE_STRUCTURE", "TYPE_FUNCTION"};
 
@@ -55,19 +65,19 @@ void print_type_info(type_t *type, int indent) {
 	printf("%skind: %s(%d)\n", indent_str, kind_str[type->kind], type->kind);
 	printf("%ssize: %lld\n", indent_str, type->size);
 
-	if (type->kind == TYPE_STRUCTURE) {
+	if (type->kind == TYPE_STRUCTURE && print_struct_members) {
 		printf("%sMembers:\n", indent_str);
 		
 		for (int i = 0; i < type->type.structure.field_counts; i++) {
 			printf("%s    field_name: %s\n", indent_str, type->type.structure.field_names[i]);
-			print_type_info(type->type.structure.field_types[i], indent+1);
+			print_type_info_helper(type->type.structure.field_types[i], indent+1, 0);
 			if (i < type->type.structure.field_counts-1) printf("\n");
 		}
 	}
 	else if (type->kind == TYPE_ARRAY || type->kind == TYPE_POINTER) {
 		printf("%scount: %d\n", indent_str, type->type.array.counts);
 		printf("%sBase Type:\n", indent_str);
-		print_type_info(type->type.array.base_type, indent+1);
+		print_type_info_helper(type->type.array.base_type, indent+1, print_struct_members);
 	}
 
 	free(indent_str);

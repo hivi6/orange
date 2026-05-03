@@ -82,7 +82,7 @@ int main(int argc, const char **argv) {
 	analyze(ast);
 	printf("=== TYPE INFORMATION ===\n\n");
 	for (type_t *temp = all_types(); temp; temp = temp->next) {
-		print_type_info(temp, 0);
+		print_type_info(temp);
 		printf("\n===================\n\n");
 	}
 
