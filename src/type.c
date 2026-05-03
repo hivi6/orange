@@ -66,7 +66,7 @@ void print_type_info_helper(type_t *type, int indent, int print_struct_members) 
 	printf("%ssize: %lld\n", indent_str, type->size);
 
 	if (type->kind == TYPE_STRUCTURE && print_struct_members) {
-		printf("%sMembers:\n", indent_str);
+		printf("%smembers:\n", indent_str);
 		
 		for (int i = 0; i < type->type.structure.field_counts; i++) {
 			printf("%s    field_name: %s\n", indent_str, type->type.structure.field_names[i]);
@@ -76,8 +76,23 @@ void print_type_info_helper(type_t *type, int indent, int print_struct_members) 
 	}
 	else if (type->kind == TYPE_ARRAY || type->kind == TYPE_POINTER) {
 		printf("%scount: %d\n", indent_str, type->type.array.counts);
-		printf("%sBase Type:\n", indent_str);
+		printf("%sbase_type:\n", indent_str);
 		print_type_info_helper(type->type.array.base_type, indent+1, print_struct_members);
+	}
+	else if (type->kind == TYPE_FUNCTION) {
+		if (type->type.function.return_type) {
+			printf("%sreturn_type:\n", indent_str);
+			print_type_info_helper(type->type.function.return_type, indent+1, 0);
+		}
+
+		if (type->type.function.param_counts) {
+			printf("%sparams:\n", indent_str);
+			for (int i = 0; i < type->type.function.param_counts; i++) {
+				printf("%s    param_name: %s\n", indent_str, type->type.function.param_names[i]);
+				print_type_info_helper(type->type.function.param_types[i], indent+1, 0);
+				if (i < type->type.function.param_counts-1) printf("\n");
+			}
+		}
 	}
 
 	free(indent_str);

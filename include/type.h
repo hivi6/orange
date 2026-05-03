@@ -13,7 +13,7 @@ enum {
 struct type_t {
 	int kind;
 	const char *name;
-	long long size; // in bytes
+	long long size; // in bytes (size of return_type in case of TYPE_FUNCTION)
 	struct type_t *next;
 
 	union {
@@ -34,6 +34,8 @@ struct type_t {
 		// TYPE_FUNCTION
 		struct {
 			struct type_t *return_type;
+
+			const char **param_names;
 			struct type_t **param_types;
 			int param_counts;
 		} function;

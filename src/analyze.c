@@ -16,6 +16,8 @@ static void create_struct(ast_t *ast);
 static void define_struct(ast_t *ast, ast_t *prog);
 static type_t *get_field_type(ast_t *ast, ast_t *prog);
 
+static void create_function(ast_t *ast, ast_t *prog);
+
 // ========================================
 // analyze.h - definition
 // ========================================
@@ -54,6 +56,12 @@ static void prog(ast_t *ast) {
 	for (int i = 0; i < ast->ast.prog.argc; i++) {
 		ast_t *decl = ast->ast.prog.argv[i];
 		if (decl->kind == AST_STRUCT_DECL) define_struct(decl, ast);
+	}
+
+	// Go through all the functions, and create type
+	for (int i = 0; i < ast->ast.prog.argc; i++) {
+		ast_t *decl = ast->ast.prog.argv[i];
+		if (decl->kind == AST_FUNCTION_DECL) create_function(decl, ast);
 	}
 }
 
@@ -189,5 +197,42 @@ static type_t *get_field_type(ast_t *ast, ast_t *prog) {
 	}
 
 	return base_type;
+}
+
+static void create_function(ast_t *ast, ast_t *prog) {
+	assert_ast_kind(ast, AST_FUNCTION_DECL, "Expected AST_FUNCTION_DECL ast");
+
+	token_t *id = ast->ast.function_decl.identifier;
+	char *function_name = token_lexical_str(id);
+	if (get_type(function_name) != NULL) {
+		eprintf(id->filepath, id->source, id->start, id->end,
+			"Function with '%s' name already defined", function_name);
+		exit(1);
+	}
+
+	type_t *type = create_type(TYPE_FUNCTION, function_name);
+
+	long long size = 0;
+	type_t *return_type = NULL;
+	if (ast->ast.function_decl.return_type) {
+		return_type = get_field_type(ast->ast.function_decl.return_type, prog);
+		size = return_type->size;
+	}
+
+	for (int i = 0; i < ast->ast.function_decl.params_cnt; i++) {
+		char *param_name = token_lexical_str(ast->ast.function_decl.params[i]->ast.var_expr.token);
+		type_t *param_type = get_field_type(ast->ast.function_decl.types[i], prog);
+
+		type->type.function.param_counts++;
+		type->type.function.param_names = realloc(type->type.function.param_names,
+			type->type.function.param_counts * sizeof(char*));
+		type->type.function.param_types = realloc(type->type.function.param_types,
+			type->type.function.param_counts * sizeof(type_t*));
+		type->type.function.param_names[type->type.function.param_counts-1] = param_name;
+		type->type.function.param_types[type->type.function.param_counts-1] = param_type;
+	}
+
+	type->type.function.return_type = return_type;
+	type->size = size;
 }
 
