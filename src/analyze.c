@@ -124,6 +124,15 @@ static void define_struct(ast_t *ast, ast_t *prog) {
 		char *field_name = token_lexical_str(field_token);
 		type_t *field_type = get_type_specifier(field_type_specifier, prog);
 
+		// check for duplicate field_name
+		for (int j = 0; j < type->type.structure.field_counts; j++) {
+			if (strcmp(field_name, type->type.structure.field_names[j]) == 0) {
+				eprintf(field_token->filepath, field_token->source, field_token->start,
+					field_token->end, "Duplicate field name in struct '%s'", name);
+				exit(1);
+			}
+		}
+
 		if (field_type->size < 0) {
 			eprintf(field_type_specifier->filepath, field_type_specifier->source,
 				field_type_specifier->start, field_type_specifier->end,
@@ -220,8 +229,19 @@ static void create_function(ast_t *ast, ast_t *prog) {
 	}
 
 	for (int i = 0; i < ast->ast.function_decl.params_cnt; i++) {
-		char *param_name = token_lexical_str(ast->ast.function_decl.params[i]->ast.var_expr.token);
+		token_t *param_token = ast->ast.function_decl.params[i]->ast.var_expr.token;
+		char *param_name = token_lexical_str(param_token);
 		type_t *param_type = get_type_specifier(ast->ast.function_decl.types[i], prog);
+
+		// check for duplicate parameter name
+		for (int j = 0; j < type->type.function.param_counts; j++) {
+			if (strcmp(param_name, type->type.function.param_names[j]) == 0) {
+				eprintf(param_token->filepath, param_token->source, param_token->start,
+					param_token->end, 
+					"Duplicate parameter name in function '%s'", function_name);
+				exit(1);
+			}
+		}
 
 		type->type.function.param_counts++;
 		type->type.function.param_names = realloc(type->type.function.param_names,
