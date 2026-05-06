@@ -3,6 +3,7 @@
 
 #include "pos.h"
 #include "token.h"
+#include "scope.h"
 
 #define AST_PRINT_DEPTH 1024
 
@@ -43,6 +44,9 @@ struct ast_t {
 	const char *source;
 	pos_t start;
 	pos_t end;
+
+	// keep track of the current scope (prog, function_decl, block_stmt)
+	scope_t *scope;
 
 	union {
 		// AST_LITERAL_EXPR

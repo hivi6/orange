@@ -3,10 +3,13 @@
 #include "type.h"
 #include "error.h"
 #include "common.h"
+#include "scope.h"
 
 // ========================================
 // helper declaration
 // ========================================
+
+static scope_t *g_global_scope;
 
 static void assert_ast_kind(ast_t *ast, int kind, const char *message);
 
@@ -45,6 +48,10 @@ static void assert_ast_kind(ast_t *ast, int kind, const char *message) {
 
 static void prog(ast_t *ast) {
 	assert_ast_kind(ast, AST_PROG, "Expected AST_PROG ast");
+
+	// create the global scope
+	g_global_scope = create_scope(NULL);
+	ast->scope = g_global_scope;
 
 	// first go through all the struct declaration for type creation
 	for (int i = 0; i < ast->ast.prog.argc; i++) {
@@ -221,6 +228,13 @@ static void create_function(ast_t *ast, ast_t *prog) {
 
 	type_t *type = create_type(TYPE_FUNCTION, function_name);
 
+	// create a symbol for function in the global scope for function call
+	create_symbol(g_global_scope, function_name, type);
+
+	// create a function scope with parent as the global scope, for params and function body
+	scope_t *function_scope = create_scope(g_global_scope);
+	ast->scope = function_scope;
+
 	long long size = 0;
 	type_t *return_type = NULL;
 	if (ast->ast.function_decl.return_type) {
@@ -242,6 +256,9 @@ static void create_function(ast_t *ast, ast_t *prog) {
 				exit(1);
 			}
 		}
+
+		// make the param part of the function scope
+		create_symbol(function_scope, param_name, param_type);
 
 		type->type.function.param_counts++;
 		type->type.function.param_names = realloc(type->type.function.param_names,
