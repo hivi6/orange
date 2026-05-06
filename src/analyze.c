@@ -14,7 +14,7 @@ static void prog(ast_t *ast);
 
 static void create_struct(ast_t *ast);
 static void define_struct(ast_t *ast, ast_t *prog);
-static type_t *get_field_type(ast_t *ast, ast_t *prog);
+static type_t *get_type_specifier(ast_t *ast, ast_t *prog);
 
 static void create_function(ast_t *ast, ast_t *prog);
 
@@ -122,7 +122,7 @@ static void define_struct(ast_t *ast, ast_t *prog) {
 		token_t *field_token = fields[i]->ast.var_expr.token;
 		ast_t *field_type_specifier = field_types[i];
 		char *field_name = token_lexical_str(field_token);
-		type_t *field_type = get_field_type(field_type_specifier, prog);
+		type_t *field_type = get_type_specifier(field_type_specifier, prog);
 
 		if (field_type->size < 0) {
 			eprintf(field_type_specifier->filepath, field_type_specifier->source,
@@ -145,7 +145,7 @@ static void define_struct(ast_t *ast, ast_t *prog) {
 	free(name);
 }
 
-static type_t *get_field_type(ast_t *ast, ast_t *prog) {
+static type_t *get_type_specifier(ast_t *ast, ast_t *prog) {
 	assert_ast_kind(ast, AST_TYPE_SPECIFIER, "Expected AST_TYPE_SPECIFIER ast");
 
 	char *type_lexical = token_lexical_str(ast->ast.type_specifier.type_name);
@@ -215,13 +215,13 @@ static void create_function(ast_t *ast, ast_t *prog) {
 	long long size = 0;
 	type_t *return_type = NULL;
 	if (ast->ast.function_decl.return_type) {
-		return_type = get_field_type(ast->ast.function_decl.return_type, prog);
+		return_type = get_type_specifier(ast->ast.function_decl.return_type, prog);
 		size = return_type->size;
 	}
 
 	for (int i = 0; i < ast->ast.function_decl.params_cnt; i++) {
 		char *param_name = token_lexical_str(ast->ast.function_decl.params[i]->ast.var_expr.token);
-		type_t *param_type = get_field_type(ast->ast.function_decl.types[i], prog);
+		type_t *param_type = get_type_specifier(ast->ast.function_decl.types[i], prog);
 
 		type->type.function.param_counts++;
 		type->type.function.param_names = realloc(type->type.function.param_names,
