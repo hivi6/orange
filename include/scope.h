@@ -6,7 +6,6 @@
 struct scope_t {
 	struct scope_t *parent;
 	symbol_t *symbols;
-	struct scope_t *next;
 };
 
 typedef struct scope_t scope_t;
