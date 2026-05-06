@@ -15,11 +15,16 @@ static void assert_ast_kind(ast_t *ast, int kind, const char *message);
 
 static void prog(ast_t *ast);
 
-static void create_struct(ast_t *ast);
-static void define_struct(ast_t *ast, ast_t *prog);
 static type_t *get_type_specifier(ast_t *ast, ast_t *prog);
 
+static void create_struct(ast_t *ast);
+static void define_struct(ast_t *ast, ast_t *prog);
 static void create_function(ast_t *ast, ast_t *prog);
+static void create_var_decl(ast_t *ast, ast_t *prog);
+
+static char is_numeric_type(type_t *t1);
+static char is_equivalent_type(type_t *t1, type_t *t2);
+static type_t *expr(ast_t *ast);
 
 // ========================================
 // analyze.h - definition
@@ -69,6 +74,12 @@ static void prog(ast_t *ast) {
 	for (int i = 0; i < ast->ast.prog.argc; i++) {
 		ast_t *decl = ast->ast.prog.argv[i];
 		if (decl->kind == AST_FUNCTION_DECL) create_function(decl, ast);
+	}
+
+	// Go through all the global variable declaration, should be sequencial
+	for (int i = 0; i < ast->ast.prog.argc; i++) {
+		ast_t *decl = ast->ast.prog.argv[i];
+		if (decl->kind == AST_VAR_DECL) create_var_decl(decl, ast);
 	}
 }
 
@@ -271,5 +282,53 @@ static void create_function(ast_t *ast, ast_t *prog) {
 
 	type->type.function.return_type = return_type;
 	type->size = size;
+}
+
+static void create_var_decl(ast_t *ast, ast_t *prog) {
+	assert_ast_kind(ast, AST_VAR_DECL, "Expected AST_VAR_DECL ast");
+
+	ast->scope = g_global_scope;
+
+	token_t *id = ast->ast.var_stmt.identifier;
+	char *name = token_lexical_str(id);
+	if (get_symbol(ast->scope, name) != NULL) {
+		eprintf(id->filepath, id->source, id->start, id->end,
+			"Cannot redefine global variable/function");
+		exit(1);
+	}
+	if (get_type(name) != NULL) {
+		eprintf(id->filepath, id->source, id->start, id->end,
+			"Cannot redefine a symbol as variable from struct");
+		exit(1);
+	}
+	type_t *type = get_type("u32");
+	if (ast->ast.var_stmt.type != NULL) {
+		type = get_type_specifier(ast->ast.var_stmt.type, prog);
+	}
+
+	if (ast->ast.var_stmt.expr != NULL) {
+		ast_t *e = ast->ast.var_stmt.expr;
+		type_t *expr_type = expr(e);
+		if (!is_equivalent_type(type, expr_type)) {
+			eprintf(e->filepath, e->source, e->start, e->end,
+				"expression type is not equivalent to the type provided in declaration");
+			exit(1);
+		}
+	}
+
+	create_symbol(g_global_scope, name, type);
+}
+
+static char is_equivalent_type(type_t *t1, type_t *t2) {
+	if (is_numeric_type(t1) && is_numeric_type(t2)) return 1;
+	return t1 == t2;
+}
+
+static char is_numeric_type(type_t *t1) {
+	return t1->kind == TYPE_POINTER || t1->kind == TYPE_PRIMITIVE || t1->kind == TYPE_ARRAY;
+}
+
+static type_t *expr(ast_t *ast) {
+	return get_type("u32");
 }
 

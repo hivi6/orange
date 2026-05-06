@@ -146,6 +146,7 @@ struct ast_t {
 		} block_stmt;
 
 		// AST_VAR_STMT
+		// AST_VAR_DECL
 		struct {
 			token_t *identifier;
 			struct ast_t *type;
