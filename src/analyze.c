@@ -453,9 +453,27 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 
 		return rtype;
 	}
+	else if (ast->kind == AST_POSTFIX_EXPR) {
+		ast_t *left = ast->ast.postfix_expr.left;
+		type_t *ltype = expr(ast->ast.postfix_expr.left, scope);
+		
+		if (!is_numeric_type(ltype)) {
+			eprintf(left->filepath, left->source, left->start, left->end,
+				"Expected numeric type for the given postfix operation");
+			exit(1);
+		}
+
+		if (!left->is_lvalue) {
+			eprintf(left->filepath, left->source, left->start, left->end,
+				"Expected lvalue");
+			exit(1);
+		}
+
+		return ltype;
+	}
 	
 	eprintf(ast->filepath, ast->source, ast->start, ast->end,
-		"Unexpected expr ast kind(%d)", ast->kind);
+		"Unexpected expr ast kind(%d)[POSTFIX: %d]", ast->kind, AST_POSTFIX_EXPR);
 	exit(1);
 }
 
