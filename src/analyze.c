@@ -404,6 +404,55 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 		if (mtype->size > rtype->size) return mtype;
 		return rtype;
 	}
+	else if (ast->kind == AST_PREFIX_EXPR) {
+		token_t *op = ast->ast.prefix_expr.op;
+		ast_t *right = ast->ast.prefix_expr.right;
+
+		// for sizeof, it should also handle struct types instead of just expressions
+		if (op->kind == TK_SIZEOF_KEYWORD) {
+			ast_t *right = ast->ast.prefix_expr.right;
+			while (right->kind == AST_GROUP_EXPR) right = right->ast.group_expr.expr;
+			if (right->kind == AST_VAR_EXPR) {
+				char *name = token_lexical_str(right->ast.var_expr.token);
+				if (get_type(name) == NULL) {
+					free(name);
+					return get_type("u64");
+				}
+				free(name);
+			}
+		}
+	
+		type_t *rtype = expr(right, scope);
+		if ((op->kind == TK_PLUS_PLUS || op->kind == TK_DASH_DASH || 
+			op->kind == TK_AMPERSAND) && !right->is_lvalue) {
+			eprintf(right->filepath, right->source, right->start, right->end,
+				"Expected lvalue");
+			exit(1);
+		}
+
+		if (op->kind == TK_SIZEOF_KEYWORD) return get_type("u64");
+		if (op->kind == TK_AMPERSAND) {
+			type_t *pointer_type = create_type(TYPE_POINTER, NULL);
+			pointer_type->type.array.base_type = rtype;
+			pointer_type->type.array.counts = 1;
+			return pointer_type;
+		}
+		if (op->kind == TK_STAR) {
+			if (rtype->kind != TYPE_POINTER) {
+				eprintf(right->filepath, right->source, right->start, right->end,
+					"Expected pointer");
+				exit(1);
+			}
+			return rtype->type.array.base_type;
+		}
+		if (!is_numeric_type(rtype)) {
+			eprintf(right->filepath, right->source, right->start, right->end,
+				"Expected numeric type for the given prefix operation");
+			exit(1);
+		}
+
+		return rtype;
+	}
 	
 	eprintf(ast->filepath, ast->source, ast->start, ast->end,
 		"Unexpected expr ast kind(%d)", ast->kind);
