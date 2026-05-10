@@ -45,8 +45,8 @@ struct ast_t {
 	pos_t start;
 	pos_t end;
 
-	// keep track of the current scope (prog, function_decl, block_stmt)
-	scope_t *scope;
+	scope_t *scope; // keep track of the current scope (prog, function_decl, block_stmt)
+	char is_lvalue; // if a lvalue (only for expr);
 
 	union {
 		// AST_LITERAL_EXPR

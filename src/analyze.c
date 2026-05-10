@@ -24,7 +24,7 @@ static void create_var_decl(ast_t *ast, ast_t *prog);
 
 static char is_numeric_type(type_t *t1);
 static char is_equivalent_type(type_t *t1, type_t *t2);
-static type_t *expr(ast_t *ast);
+static type_t *expr(ast_t *ast, scope_t *scope);
 
 // ========================================
 // analyze.h - definition
@@ -36,6 +36,11 @@ void analyze(ast_t *ast) {
 	create_type(TYPE_PRIMITIVE, "u16")->size = 2;
 	create_type(TYPE_PRIMITIVE, "u32")->size = 4;
 	create_type(TYPE_PRIMITIVE, "u64")->size = 8;
+
+	// create pointer type
+	type_t *str_type = create_type(TYPE_POINTER, "*u8");
+	str_type->type.array.base_type = get_type("u8");
+	str_type->type.array.counts = 1;
 
 	prog(ast);
 }
@@ -308,7 +313,7 @@ static void create_var_decl(ast_t *ast, ast_t *prog) {
 
 	if (ast->ast.var_stmt.expr != NULL) {
 		ast_t *e = ast->ast.var_stmt.expr;
-		type_t *expr_type = expr(e);
+		type_t *expr_type = expr(e, g_global_scope);
 		if (!is_equivalent_type(type, expr_type)) {
 			eprintf(e->filepath, e->source, e->start, e->end,
 				"expression type is not equivalent to the type provided in declaration");
@@ -328,7 +333,80 @@ static char is_numeric_type(type_t *t1) {
 	return t1->kind == TYPE_POINTER || t1->kind == TYPE_PRIMITIVE || t1->kind == TYPE_ARRAY;
 }
 
-static type_t *expr(ast_t *ast) {
-	return get_type("u32");
+static type_t *expr(ast_t *ast, scope_t *scope) {
+	ast->scope = scope;
+
+	if (ast->kind == AST_LITERAL_EXPR) {
+		switch (ast->ast.literal_expr.token->kind) {
+		case TK_INT_LITERAL:
+			return get_type("u32");
+		case TK_CHAR_LITERAL:
+			return get_type("u8");
+		case TK_STR_LITERAL:
+			return get_type("*u8");
+		}
+	}
+	else if (ast->kind == AST_VAR_EXPR) {
+		token_t *var_token = ast->ast.var_expr.token;
+		char *name = token_lexical_str(var_token);
+		symbol_t *symbol = get_symbol(scope, name);
+		if (symbol == NULL) {
+			eprintf(var_token->filepath, var_token->source, var_token->start, var_token->end,
+				"No such symbol defined");
+			exit(1);
+		}
+		ast->is_lvalue = 1;
+		return symbol->type;
+	}
+	else if (ast->kind == AST_GROUP_EXPR) {
+		type_t *type = expr(ast->ast.group_expr.expr, scope);
+		ast->is_lvalue = ast->ast.group_expr.expr->is_lvalue;
+		return type;
+	}
+	else if (ast->kind == AST_BINARY_EXPR) {
+		type_t *ltype = expr(ast->ast.binary_expr.left, scope);
+		type_t *rtype = expr(ast->ast.binary_expr.right, scope);
+		if (ast->ast.binary_expr.op->kind == TK_EQUAL && !ast->ast.binary_expr.left->is_lvalue) {
+			ast_t *left = ast->ast.binary_expr.left;
+			eprintf(left->filepath, left->source, left->start, left->end,
+				"Expected an lvalue");
+			exit(1);
+		}
+		ast->is_lvalue = ast->ast.binary_expr.left->is_lvalue;
+		
+		if (!is_equivalent_type(ltype, rtype)) {
+			token_t *op = ast->ast.binary_expr.op;
+			eprintf(op->filepath, op->source, op->start, op->end,
+				"Unsupported operation for left and right expression");
+			exit(1);
+		}
+
+		if (ltype->size > rtype->size) return ltype;
+		return rtype;
+	}
+	else if (ast->kind == AST_TERNARY_EXPR) {
+		type_t *ltype = expr(ast->ast.ternary_expr.left, scope);
+		type_t *mtype = expr(ast->ast.ternary_expr.mid, scope);
+		type_t *rtype = expr(ast->ast.ternary_expr.right, scope);
+
+		if (!is_equivalent_type(mtype, rtype)) {
+			eprintf(ast->filepath, ast->source, ast->start, ast->end,
+				"Unsupported type for mid and right expression");
+			exit(1);
+		}
+
+		if (!is_numeric_type(ltype)) {
+			eprintf(ast->filepath, ast->source, ast->start, ast->end,
+				"Expected numeric expression in condition");
+			exit(1);
+		}
+		
+		if (mtype->size > rtype->size) return mtype;
+		return rtype;
+	}
+	
+	eprintf(ast->filepath, ast->source, ast->start, ast->end,
+		"Unexpected expr ast kind(%d)", ast->kind);
+	exit(1);
 }
 
