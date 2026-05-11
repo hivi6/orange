@@ -566,6 +566,8 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 }
 
 static void stmt(ast_t *ast, scope_t *scope, type_t *return_type) {
+	ast->scope = scope;
+
 	if (ast->kind == AST_EXPR_STMT) {
 		type_t *type = expr(ast->ast.expr_stmt.expr, scope);
 		return;
@@ -586,6 +588,48 @@ static void stmt(ast_t *ast, scope_t *scope, type_t *return_type) {
 			eprintf(e->filepath, e->source, e->start, e->end,
 				"Return type and return stmt expression is not equivalent");
 			exit(1);
+		}
+
+		return;
+	}
+	else if (ast->kind == AST_DEFER_STMT) {
+		return;
+	}
+	else if (ast->kind == AST_WHILE_STMT) {
+		ast_t *e = ast->ast.while_stmt.expr;
+		ast_t *s = ast->ast.while_stmt.stmt;
+
+		type_t *etype = expr(e, scope);
+		if (!is_numeric_type(etype)) {
+			eprintf(e->filepath, e->source, e->start, e->end,
+				"Condition should be a numeric type");
+			exit(1);
+		}
+
+		stmt(s, scope, return_type);
+		return;
+	}
+	else if (ast->kind == AST_IF_STMT) {
+		ast_t *e = ast->ast.if_stmt.expr;
+		ast_t *true_stmt = ast->ast.if_stmt.true_stmt;
+		ast_t *false_stmt = ast->ast.if_stmt.false_stmt;
+
+		type_t *etype = expr(e, scope);
+		if (!is_numeric_type(etype)) {
+			eprintf(e->filepath, e->source, e->start, e->end,
+				"Condition should be a numeric type");
+			exit(1);
+		}
+
+		stmt(true_stmt, scope, return_type);
+		if (false_stmt) stmt(false_stmt, scope, return_type);
+		return;
+	}
+	else if (ast->kind == AST_BLOCK_STMT) {
+		scope_t *block_scope = create_scope(scope);
+		
+		for (int i = 0; i < ast->ast.block_stmt.argc; i++) {
+			stmt(ast->ast.block_stmt.argv[i], block_scope, return_type);
 		}
 
 		return;
