@@ -36,6 +36,7 @@ void analyze(ast_t *ast) {
 	create_type(TYPE_PRIMITIVE, "u16")->size = 2;
 	create_type(TYPE_PRIMITIVE, "u32")->size = 4;
 	create_type(TYPE_PRIMITIVE, "u64")->size = 8;
+	create_type(TYPE_VOID, "void")->size = 0;
 
 	// create pointer type
 	type_t *str_type = create_type(TYPE_POINTER, "*u8");
@@ -252,7 +253,7 @@ static void create_function(ast_t *ast, ast_t *prog) {
 	ast->scope = function_scope;
 
 	long long size = 0;
-	type_t *return_type = NULL;
+	type_t *return_type = get_type("void");
 	if (ast->ast.function_decl.return_type) {
 		return_type = get_type_specifier(ast->ast.function_decl.return_type, prog);
 		size = return_type->size;
@@ -552,12 +553,6 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 					"Unmatched parameter type");
 				exit(1);
 			}
-		}
-
-		if (ltype->type.function.return_type == NULL) {
-			eprintf(left->filepath, left->source, left->start, left->end,
-				"Expected a function with a return type");
-			exit(1);
 		}
 
 		return ltype->type.function.return_type;

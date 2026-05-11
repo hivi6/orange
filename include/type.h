@@ -2,6 +2,7 @@
 #define TYPE_H
 
 enum {
+	TYPE_VOID,
 	// u8, u16, u32, u64
 	TYPE_PRIMITIVE,
 	TYPE_POINTER,

@@ -52,7 +52,7 @@ void print_type_info(type_t *type) {
 // ========================================
 
 void print_type_info_helper(type_t *type, int indent, int print_struct_members) {
-	const char *kind_str[] = {"TYPE_PRIMITIVE", "TYPE_POINTER", "TYPE_ARRAY", 
+	const char *kind_str[] = {"TYPE_VOID", "TYPE_PRIMITIVE", "TYPE_POINTER", "TYPE_ARRAY", 
 		"TYPE_STRUCTURE", "TYPE_FUNCTION"};
 
 	char *indent_str = malloc((indent * 4 + 1) * sizeof(char));
