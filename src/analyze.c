@@ -198,6 +198,12 @@ static type_t *get_type_specifier(ast_t *ast, ast_t *prog) {
 
 	// time to resolve the base_type
 	if (base_type->size < 0) {
+		if (prog == NULL) {
+			eprintf(ast->filepath, ast->source, ast->start, ast->end,
+				"No such type definition");
+			exit(1);
+		}
+
 		for (int i = 0; i < prog->ast.prog.argc; i++) {
 			ast_t *decl = prog->ast.prog.argv[i];
 			if (decl->kind == AST_STRUCT_DECL) {
@@ -632,6 +638,39 @@ static void stmt(ast_t *ast, scope_t *scope, type_t *return_type) {
 			stmt(ast->ast.block_stmt.argv[i], block_scope, return_type);
 		}
 
+		return;
+	}
+	else if (ast->kind == AST_VAR_STMT) {
+		token_t *id = ast->ast.var_stmt.identifier;
+		char *name = token_lexical_str(id);
+		for (symbol_t *head = ast->scope->symbols; head; head = head->next) {
+			if (strcmp(head->name, name) == 0) {
+				eprintf(id->filepath, id->source, id->start, id->end,
+					"Cannot redefine global variable/function");
+				exit(1);
+			}
+		}
+		if (get_type(name) != NULL) {
+			eprintf(id->filepath, id->source, id->start, id->end,
+				"Cannot redefine a symbol as variable from struct");
+			exit(1);
+		}
+		type_t *type = get_type("u32");
+		if (ast->ast.var_stmt.type != NULL) {
+			type = get_type_specifier(ast->ast.var_stmt.type, NULL);
+		}
+
+		if (ast->ast.var_stmt.expr != NULL) {
+			ast_t *e = ast->ast.var_stmt.expr;
+			type_t *expr_type = expr(e, ast->scope);
+			if (!is_equivalent_type(type, expr_type)) {
+				eprintf(e->filepath, e->source, e->start, e->end,
+					"expression type is not equivalent to the type provided in declaration");
+				exit(1);
+			}
+		}
+
+		create_symbol(ast->scope, name, type);
 		return;
 	}
 
