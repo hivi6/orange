@@ -25,6 +25,7 @@ static void create_var_decl(ast_t *ast, ast_t *prog);
 static char is_numeric_type(type_t *t1);
 static char is_equivalent_type(type_t *t1, type_t *t2);
 static type_t *expr(ast_t *ast, scope_t *scope);
+static void stmt(ast_t *ast, scope_t *scope, type_t *return_type);
 
 // ========================================
 // analyze.h - definition
@@ -76,16 +77,11 @@ static void prog(ast_t *ast) {
 		if (decl->kind == AST_STRUCT_DECL) define_struct(decl, ast);
 	}
 
-	// Go through all the functions, and create type
+	// Go through all the functions and variable decl, and create type; should be sequential
 	for (int i = 0; i < ast->ast.prog.argc; i++) {
 		ast_t *decl = ast->ast.prog.argv[i];
 		if (decl->kind == AST_FUNCTION_DECL) create_function(decl, ast);
-	}
-
-	// Go through all the global variable declaration, should be sequencial
-	for (int i = 0; i < ast->ast.prog.argc; i++) {
-		ast_t *decl = ast->ast.prog.argv[i];
-		if (decl->kind == AST_VAR_DECL) create_var_decl(decl, ast);
+		else if (decl->kind == AST_VAR_DECL) create_var_decl(decl, ast);
 	}
 }
 
@@ -288,6 +284,12 @@ static void create_function(ast_t *ast, ast_t *prog) {
 
 	type->type.function.return_type = return_type;
 	type->size = size;
+
+	// go through function body
+	ast_t *body = ast->ast.function_decl.body;
+	for (int i = 0; i < body->ast.block_stmt.argc; i++) {
+		stmt(body->ast.block_stmt.argv[i], function_scope, return_type);
+	}
 }
 
 static void create_var_decl(ast_t *ast, ast_t *prog) {
@@ -559,7 +561,38 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 	}
 	
 	eprintf(ast->filepath, ast->source, ast->start, ast->end,
-		"Unexpected expr ast kind(%d)[POSTFIX: %d]", ast->kind, AST_POSTFIX_EXPR);
+		"Unexpected expr ast kind(%d)", ast->kind);
+	exit(1);
+}
+
+static void stmt(ast_t *ast, scope_t *scope, type_t *return_type) {
+	if (ast->kind == AST_EXPR_STMT) {
+		type_t *type = expr(ast->ast.expr_stmt.expr, scope);
+		return;
+	}
+	else if (ast->kind == AST_RETURN_STMT) {
+		ast_t *e = ast->ast.expr_stmt.expr;
+		if (e == NULL) {
+			if (return_type->kind != TYPE_VOID) {
+				eprintf(ast->filepath, ast->source, ast->start, ast->end,
+					"Return type is not void, so need some expression in return stmt");
+				exit(1);
+			}
+			return;
+		}
+
+		type_t *etype = expr(e, scope);
+		if (!is_equivalent_type(etype, return_type)) {
+			eprintf(e->filepath, e->source, e->start, e->end,
+				"Return type and return stmt expression is not equivalent");
+			exit(1);
+		}
+
+		return;
+	}
+
+	eprintf(ast->filepath, ast->source, ast->start, ast->end,
+		"Unexpected stmt ast kind(%d)", ast->kind);
 	exit(1);
 }
 
