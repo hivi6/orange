@@ -381,6 +381,9 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 			exit(1);
 		}
 
+		if (ltype->kind == TYPE_POINTER || ltype->kind == TYPE_ARRAY) return ltype;
+		if (rtype->kind == TYPE_POINTER || rtype->kind == TYPE_ARRAY) return rtype;
+
 		if (ltype->size > rtype->size) return ltype;
 		return rtype;
 	}
@@ -470,6 +473,24 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 		}
 
 		return ltype;
+	}
+	else if (ast->kind == AST_ARRAY_ACCESS_EXPR) {
+		ast_t *left = ast->ast.array_access_expr.left;
+		ast_t *index = ast->ast.array_access_expr.index;
+		type_t *ltype = expr(left, scope);
+		type_t *itype = expr(index, scope);
+		if (itype->kind != TYPE_PRIMITIVE) {
+			eprintf(index->filepath, index->source, index->start, index->end,
+				"Expected numeric index expression");
+			exit(1);
+		}
+		if (ltype->kind != TYPE_POINTER && ltype->kind != TYPE_ARRAY) {
+			eprintf(left->filepath, left->source, left->start, left->end,
+				"Expected pointer or array type");
+			exit(1);
+		}
+		ast->is_lvalue = 1;
+		return ltype->type.array.base_type;
 	}
 	
 	eprintf(ast->filepath, ast->source, ast->start, ast->end,
