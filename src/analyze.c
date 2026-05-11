@@ -477,8 +477,10 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 	else if (ast->kind == AST_ARRAY_ACCESS_EXPR) {
 		ast_t *left = ast->ast.array_access_expr.left;
 		ast_t *index = ast->ast.array_access_expr.index;
+
 		type_t *ltype = expr(left, scope);
 		type_t *itype = expr(index, scope);
+
 		if (itype->kind != TYPE_PRIMITIVE) {
 			eprintf(index->filepath, index->source, index->start, index->end,
 				"Expected numeric index expression");
@@ -489,8 +491,42 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 				"Expected pointer or array type");
 			exit(1);
 		}
+
 		ast->is_lvalue = 1;
 		return ltype->type.array.base_type;
+	}
+	else if (ast->kind == AST_MEMBER_ACCESS_EXPR) {
+		ast_t *left = ast->ast.member_access_expr.left;
+		token_t *op = ast->ast.member_access_expr.op;
+		token_t *member = ast->ast.member_access_expr.member;
+
+		type_t *ltype = expr(left, scope);
+		type_t *stype = NULL;
+		if (op->kind == TK_DASH_RCHEVRON && 
+			(ltype->kind == TYPE_POINTER || ltype->kind == TYPE_ARRAY)) {
+			stype = ltype->type.array.base_type;
+		}
+		if (op->kind == TK_DOT) {
+			stype = ltype;
+		}
+
+		if (stype == NULL || stype->kind != TYPE_STRUCTURE) {
+			eprintf(left->filepath, left->source, left->start, left->end,
+				"Expected a struct or a struct pointer");
+			exit(1);
+		}
+
+		char *name = token_lexical_str(member);
+		for (int i = 0; i < stype->type.structure.field_counts; i++) {
+			if (strcmp(name, stype->type.structure.field_names[i]) == 0) {
+				free(name);
+				return stype->type.structure.field_types[i];
+			}
+		}
+		
+		eprintf(member->filepath, member->source, member->start, member->end,
+			"Not a valid member field");
+		exit(1);
 	}
 	
 	eprintf(ast->filepath, ast->source, ast->start, ast->end,
