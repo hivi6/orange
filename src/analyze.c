@@ -25,7 +25,7 @@ static void create_var_decl(ast_t *ast, ast_t *prog);
 static char is_numeric_type(type_t *t1);
 static char is_equivalent_type(type_t *t1, type_t *t2);
 static type_t *expr(ast_t *ast, scope_t *scope);
-static void stmt(ast_t *ast, scope_t *scope, type_t *return_type);
+static void stmt(ast_t *ast, scope_t *scope, type_t *return_type, char in_loop);
 
 // ========================================
 // analyze.h - definition
@@ -294,7 +294,7 @@ static void create_function(ast_t *ast, ast_t *prog) {
 	// go through function body
 	ast_t *body = ast->ast.function_decl.body;
 	for (int i = 0; i < body->ast.block_stmt.argc; i++) {
-		stmt(body->ast.block_stmt.argv[i], function_scope, return_type);
+		stmt(body->ast.block_stmt.argv[i], function_scope, return_type, 0);
 	}
 }
 
@@ -571,7 +571,7 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 	exit(1);
 }
 
-static void stmt(ast_t *ast, scope_t *scope, type_t *return_type) {
+static void stmt(ast_t *ast, scope_t *scope, type_t *return_type, char in_loop) {
 	ast->scope = scope;
 
 	if (ast->kind == AST_EXPR_STMT) {
@@ -612,7 +612,7 @@ static void stmt(ast_t *ast, scope_t *scope, type_t *return_type) {
 			exit(1);
 		}
 
-		stmt(s, scope, return_type);
+		stmt(s, scope, return_type, 1);
 		return;
 	}
 	else if (ast->kind == AST_IF_STMT) {
@@ -627,15 +627,15 @@ static void stmt(ast_t *ast, scope_t *scope, type_t *return_type) {
 			exit(1);
 		}
 
-		stmt(true_stmt, scope, return_type);
-		if (false_stmt) stmt(false_stmt, scope, return_type);
+		stmt(true_stmt, scope, return_type, in_loop);
+		if (false_stmt) stmt(false_stmt, scope, return_type, in_loop);
 		return;
 	}
 	else if (ast->kind == AST_BLOCK_STMT) {
 		scope_t *block_scope = create_scope(scope);
 		
 		for (int i = 0; i < ast->ast.block_stmt.argc; i++) {
-			stmt(ast->ast.block_stmt.argv[i], block_scope, return_type);
+			stmt(ast->ast.block_stmt.argv[i], block_scope, return_type, in_loop);
 		}
 
 		return;
@@ -671,6 +671,14 @@ static void stmt(ast_t *ast, scope_t *scope, type_t *return_type) {
 		}
 
 		create_symbol(ast->scope, name, type);
+		return;
+	}
+	else if (ast->kind == AST_BREAK_STMT || ast->kind == AST_CONTINUE_STMT) {
+		if (!in_loop) {
+			eprintf(ast->filepath, ast->source, ast->start, ast->end,
+				"Not a valid break statement, as not part of any loop");
+			exit(1);
+		}
 		return;
 	}
 
