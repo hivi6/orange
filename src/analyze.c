@@ -528,6 +528,40 @@ static type_t *expr(ast_t *ast, scope_t *scope) {
 			"Not a valid member field");
 		exit(1);
 	}
+	else if (ast->kind == AST_FUNCTION_CALL_EXPR) {
+		ast_t *left = ast->ast.function_call_expr.left;
+		type_t *ltype = expr(left, scope);
+
+		if (ltype->kind != TYPE_FUNCTION) {
+			eprintf(left->filepath, left->source, left->start, left->end,
+				"Expected a function");
+			exit(1);
+		}
+
+		if (ltype->type.function.param_counts != ast->ast.function_call_expr.argc) {
+			eprintf(ast->filepath, ast->source, ast->start, ast->end,
+				"Unmatched parameter counts");
+			exit(1);
+		}
+
+		for (int i = 0; i < ast->ast.function_call_expr.argc; i++) {
+			ast_t *arg = ast->ast.function_call_expr.argv[i];
+			type_t *atype = expr(arg, scope);
+			if (!is_equivalent_type(atype, ltype->type.function.param_types[i])) {
+				eprintf(arg->filepath, arg->source, arg->start, arg->end,
+					"Unmatched parameter type");
+				exit(1);
+			}
+		}
+
+		if (ltype->type.function.return_type == NULL) {
+			eprintf(left->filepath, left->source, left->start, left->end,
+				"Expected a function with a return type");
+			exit(1);
+		}
+
+		return ltype->type.function.return_type;
+	}
 	
 	eprintf(ast->filepath, ast->source, ast->start, ast->end,
 		"Unexpected expr ast kind(%d)[POSTFIX: %d]", ast->kind, AST_POSTFIX_EXPR);
