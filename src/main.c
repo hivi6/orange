@@ -96,7 +96,7 @@ int main(int argc, const char **argv) {
 	}
 
 	char *code = codegen(ast);
-	printf("ASSEMBLY CODE:\n%s", code);
+	printf("%s", code);
 	free(code);
 
 	return 0;
