@@ -3,6 +3,7 @@
 #include "ast.h"
 #include "analyze.h"
 #include "type.h"
+#include "codegen.h"
 
 // ========================================
 // helper declarations
@@ -17,9 +18,10 @@ void usage(FILE *fptr) {
 		"    programming language for citrus VM\n"
 		"\n"
 		"OPTION:\n"
-		"    -h, --help     This screen\n"
-		"    --only-tokens  Print only the tokens\n"
-		"    --only-ast     Print only the ast\n"
+		"    -h, --help        This screen\n"
+		"    --only-tokens     Print only the tokens\n"
+		"    --only-ast        Print only the ast\n"
+		"    --only-semantics  Print only the type information\n"
 		"\n"
 		"HINTS:\n"
 		"    1. If you want to read from stdin, then make filepath == '-'\n"
@@ -31,7 +33,8 @@ void usage(FILE *fptr) {
 // ========================================
 
 int main(int argc, const char **argv) {
-	int usage_flag = 0, only_tokens_flag = 0, only_ast_flag = 0;
+	int usage_flag = 0, only_tokens_flag = 0, 
+		only_ast_flag = 0, only_semantics_flag = 0;
 	int argi = 1;
 	for (; argi < argc; argi++) {
 		if (strcmp(argv[argi], "-h") == 0 || 
@@ -43,6 +46,9 @@ int main(int argc, const char **argv) {
 		}
 		else if (strcmp(argv[argi], "--only-ast") == 0) {
 			only_ast_flag = 1;
+		}
+		else if (strcmp(argv[argi], "--only-semantics") == 0) {
+			only_semantics_flag = 1;
 		}
 		else {
 			break;
@@ -80,11 +86,18 @@ int main(int argc, const char **argv) {
 	}
 
 	analyze(ast);
-	printf("=== TYPE INFORMATION ===\n\n");
-	for (type_t *temp = all_types(); temp; temp = temp->next) {
-		print_type_info(temp);
-		printf("\n===================\n\n");
+	if (only_semantics_flag) {
+		printf("=== TYPE INFORMATION ===\n\n");
+		for (type_t *temp = all_types(); temp; temp = temp->next) {
+			print_type_info(temp);
+			printf("\n===================\n\n");
+		}
+		return 0;
 	}
+
+	char *code = codegen(ast);
+	printf("ASSEMBLY CODE:\n%s", code);
+	free(code);
 
 	return 0;
 }

@@ -25,15 +25,17 @@ void sbuilder_reserve(sbuilder_t *s, int new_cap) {
 void sbuilder_appendf(sbuilder_t *s, const char *format, ...) {
 	va_list args;
 	va_start(args, format);
-	int len = vsnprintf(NULL, 0, format, args);
+	sbuilder_appendvf(s, format, args);
 	va_end(args);
+}
 
+void sbuilder_appendvf(sbuilder_t *s, const char *format, va_list arg) {
+	va_list prev = arg;
+	int len = vsnprintf(NULL, 0, format, arg);
 	sbuilder_reserve(s, s->cap + len + 2);
 
-	va_start(args, format);
-	vsprintf(s->elems + s->len, format, args);
-	va_end(args);
-
+	arg = prev;
+	vsprintf(s->elems + s->len, format, arg);
 	s->len += len;
 }
 

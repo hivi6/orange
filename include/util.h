@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include "common.h"
+
 struct sbuilder_t {
 	char *elems;
 	int len;
@@ -43,6 +45,16 @@ void sbuilder_reserve(sbuilder_t *s, int new_cap);
  *     ...     variable arguments for the append(like printf)
  */
 void sbuilder_appendf(sbuilder_t *s, const char *format, ...);
+
+/**
+ * Like appendf but using va_list
+ *
+ * params:
+ *     s       pointer to string builder
+ *     format  format for the append string
+ *     arg     va_list arguments
+ */
+void sbuilder_appendvf(sbuilder_t *s, const char *format, va_list arg);
 
 /**
  * Create a new memory space with the content of the string builder
